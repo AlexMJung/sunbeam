@@ -201,6 +201,106 @@ HUBS = {
                 },
             ]
         }
+    },
+    'HAVERHILL': {
+        'TRANSPARENT_CLASSROOM_API_TOKEN': os.environ['TRANSPARENT_CLASSROOM_API_TOKEN_HAVERHILL'],
+        'SURVEY_MONKEY_SURVEY_ID': '113109957',
+        'SURVEY_MONKEY_COLLECTOR_ID': 'WildflowerHaverhill',
+        'MAPPING': {
+            'PARENTS': [
+                {
+                    'FIRST_NAME': {'SURVEY_MONKEY': "81257076", 'TRANSPARENT_CLASSROOM': 'first_parent_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "81257080", 'TRANSPARENT_CLASSROOM': 'first_parent_name.last'} ,
+                    'RELATIONSHIP_TO_CHILD': {'SURVEY_MONKEY': '81313746', 'TRANSPARENT_CLASSROOM': 'first_parent_relationship_to_child'},
+                    'EMAIL': {'SURVEY_MONKEY': "81257077", 'TRANSPARENT_CLASSROOM': 'first_parent_email'},
+                    'HOME_PHONE': {'SURVEY_MONKEY': "81257079", 'TRANSPARENT_CLASSROOM': 'first_parent_home_number'},
+                    'MOBILE_PHONE': {'SURVEY_MONKEY': "81310838", 'TRANSPARENT_CLASSROOM': 'first_parent_mobile_number'},
+                    'ADDRESS': {'SURVEY_MONKEY': "81257078", 'TRANSPARENT_CLASSROOM': 'first_parent_address'},
+                    'EMPLOYER': {'SURVEY_MONKEY': "81310734", 'TRANSPARENT_CLASSROOM': 'first_parent_employer'},
+                    'BUSINESS_ADDRESS': {'SURVEY_MONKEY': "81311109", 'TRANSPARENT_CLASSROOM': 'first_parent_business_address'},
+                    'BUSINESS_PHONE': {'SURVEY_MONKEY': "81311163", 'TRANSPARENT_CLASSROOM': 'first_parent_work_number'},
+                    'HOURS_AT_WORK': {'SURVEY_MONKEY': "81311323", 'TRANSPARENT_CLASSROOM': 'first_parent_hours_at_work'},
+                    'PREFERRED_CONTACT_METHOD': {'SURVEY_MONKEY': '81311889', 'TRANSPARENT_CLASSROOM': 'first_parent_preferred_contact_method'},
+                    'BEST_TIME_TO_REACH_ME': {'SURVEY_MONKEY': '81312207', 'TRANSPARENT_CLASSROOM': 'first_parent_best_time_to_reach_me'},
+                    'COURT_ORDER_REGARDING_GUARDIANSHIP': {'SURVEY_MONKEY': '81312604', 'TRANSPARENT_CLASSROOM': 'first_parent_court_order_regarding_guardianship'},
+                    'RESTRAINING_ORDERS': {'SURVEY_MONKEY': '81312973', 'TRANSPARENT_CLASSROOM': 'first_parent_restraining_orders'}
+                },
+                {
+                    'FIRST_NAME': {'SURVEY_MONKEY': "81313361", 'TRANSPARENT_CLASSROOM': 'second_parent_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "81313362", 'TRANSPARENT_CLASSROOM': 'second_parent_name.last'} ,
+                    'RELATIONSHIP_TO_CHILD': {'SURVEY_MONKEY': '81313941', 'TRANSPARENT_CLASSROOM': 'second_parent_relationship_to_child'},
+                    'EMAIL': {'SURVEY_MONKEY': "81313363", 'TRANSPARENT_CLASSROOM': 'second_parent_email'},
+                    'HOME_PHONE': {'SURVEY_MONKEY': "81313364", 'TRANSPARENT_CLASSROOM': 'second_parent_home_number'},
+                    'MOBILE_PHONE': {'SURVEY_MONKEY': "81313365", 'TRANSPARENT_CLASSROOM': 'second_parent_mobile_number'},
+                    'ADDRESS': {'SURVEY_MONKEY': "81313366", 'TRANSPARENT_CLASSROOM': 'second_parent_address'},
+                    'EMPLOYER': {'SURVEY_MONKEY': "81313367", 'TRANSPARENT_CLASSROOM': 'second_parent_employer'},
+                    'BUSINESS_ADDRESS': {'SURVEY_MONKEY': "81313368", 'TRANSPARENT_CLASSROOM': 'second_parent_business_address'},
+                    'BUSINESS_PHONE': {'SURVEY_MONKEY': "81313369", 'TRANSPARENT_CLASSROOM': 'second_parent_work_number'},
+                    'HOURS_AT_WORK': {'SURVEY_MONKEY': "81313370", 'TRANSPARENT_CLASSROOM': 'second_parent_hours_at_work'},
+                    'PREFERRED_CONTACT_METHOD': {'SURVEY_MONKEY': '81313371', 'TRANSPARENT_CLASSROOM': 'second_parent_preferred_contact_method'},
+                    'BEST_TIME_TO_REACH_ME': {'SURVEY_MONKEY': '81313372', 'TRANSPARENT_CLASSROOM': 'second_parent_best_time_to_reach_me'},
+                    'COURT_ORDER_REGARDING_GUARDIANSHIP': {'SURVEY_MONKEY': '81313373', 'TRANSPARENT_CLASSROOM': 'second_parent_court_order_regarding_guardianship'},
+                    'RESTRAINING_ORDERS': {'SURVEY_MONKEY': '81313374', 'TRANSPARENT_CLASSROOM': 'second_parent_restraining_orders'}
+                }
+            ],
+            'CHILDREN': [
+                { # first
+                    'FIRST_NAME': {'SURVEY_MONKEY': "81257086", 'TRANSPARENT_CLASSROOM': 'child_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "81257089", 'TRANSPARENT_CLASSROOM': 'child_name.last'},
+                    'WHERE_DOES_CHILD_LIVE': {'SURVEY_MONKEY': '142327657', 'TRANSPARENT_CLASSROOM': 'where_does_the_child_live'},
+                    'DOB': {'SURVEY_MONKEY': "81257087", 'TRANSPARENT_CLASSROOM': 'child_birth_date'},
+                    'GENDER': {'SURVEY_MONKEY': "81257088", 'TRANSPARENT_CLASSROOM': 'child_gender'},
+                    'PRIMARY_LANGUAGE': {'SURVEY_MONKEY': '81315496', 'TRANSPARENT_CLASSROOM': 'primary_language'},
+                    'PLACE_OF_BIRTH': {'SURVEY_MONKEY': '81315700', 'TRANSPARENT_CLASSROOM': 'place_of_birth'},
+                    'ETHNCITY': {'SURVEY_MONKEY': '81257091', 'TRANSPARENT_CLASSROOM': 'ethnicity'},
+                    'SCHOOLS': {'SURVEY_MONKEY': "141597398", 'TRANSPARENT_CLASSROOM': 'schools'},
+                    'SCHOOLS_RANKING': {'SURVEY_MONKEY': "141618685", 'TRANSPARENT_CLASSROOM': 'schools_ranking'},
+                    'WHICH_PROGRAM': {'SURVEY_MONKEY': "141613993", 'TRANSPARENT_CLASSROOM': 'which_program'},
+                    'WHY_A_GOOD_FIT': {'SURVEY_MONKEY': "142347148", 'TRANSPARENT_CLASSROOM': 'why_a_good_fit'},
+                },
+                { # second
+                    'FIRST_NAME': {'SURVEY_MONKEY': "142339414", 'TRANSPARENT_CLASSROOM': 'child_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "142339415", 'TRANSPARENT_CLASSROOM': 'child_name.last'},
+                    'WHERE_DOES_CHILD_LIVE': {'SURVEY_MONKEY': '142339416', 'TRANSPARENT_CLASSROOM': 'where_does_the_child_live'},
+                    'DOB': {'SURVEY_MONKEY': "142339417", 'TRANSPARENT_CLASSROOM': 'child_birth_date'},
+                    'GENDER': {'SURVEY_MONKEY': "142339418", 'TRANSPARENT_CLASSROOM': 'child_gender'},
+                    'PRIMARY_LANGUAGE': {'SURVEY_MONKEY': '142339419', 'TRANSPARENT_CLASSROOM': 'primary_language'},
+                    'PLACE_OF_BIRTH': {'SURVEY_MONKEY': '142339420', 'TRANSPARENT_CLASSROOM': 'place_of_birth'},
+                    'ETHNCITY': {'SURVEY_MONKEY': '142339422', 'TRANSPARENT_CLASSROOM': 'ethnicity'},
+                    'SCHOOLS': {'SURVEY_MONKEY': "142339978", 'TRANSPARENT_CLASSROOM': 'schools'},
+                    'SCHOOLS_RANKING': {'SURVEY_MONKEY': "142359090", 'TRANSPARENT_CLASSROOM': 'schools_ranking'},
+                    'WHICH_PROGRAM': {'SURVEY_MONKEY': "142339979", 'TRANSPARENT_CLASSROOM': 'which_program'},
+                    'WHY_A_GOOD_FIT': {'SURVEY_MONKEY': "142347481", 'TRANSPARENT_CLASSROOM': 'why_a_good_fit'},
+                },
+                { # third
+                    'FIRST_NAME': {'SURVEY_MONKEY': "142344734", 'TRANSPARENT_CLASSROOM': 'child_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "142344735", 'TRANSPARENT_CLASSROOM': 'child_name.last'},
+                    'WHERE_DOES_CHILD_LIVE': {'SURVEY_MONKEY': '142344736', 'TRANSPARENT_CLASSROOM': 'where_does_the_child_live'},
+                    'DOB': {'SURVEY_MONKEY': "142344737", 'TRANSPARENT_CLASSROOM': 'child_birth_date'},
+                    'GENDER': {'SURVEY_MONKEY': "142344738", 'TRANSPARENT_CLASSROOM': 'child_gender'},
+                    'PRIMARY_LANGUAGE': {'SURVEY_MONKEY': '142344739', 'TRANSPARENT_CLASSROOM': 'primary_language'},
+                    'PLACE_OF_BIRTH': {'SURVEY_MONKEY': '142344740', 'TRANSPARENT_CLASSROOM': 'place_of_birth'},
+                    'ETHNCITY': {'SURVEY_MONKEY': '142344742', 'TRANSPARENT_CLASSROOM': 'ethncity'},
+                    'SCHOOLS': {'SURVEY_MONKEY': "142345050", 'TRANSPARENT_CLASSROOM': 'schools'},
+                    'SCHOOLS_RANKING': {'SURVEY_MONKEY': "142345349", 'TRANSPARENT_CLASSROOM': 'schools_ranking'},
+                    'WHICH_PROGRAM': {'SURVEY_MONKEY': "142345051", 'TRANSPARENT_CLASSROOM': 'which_program'},
+                    'WHY_A_GOOD_FIT': {'SURVEY_MONKEY': "142347652", 'TRANSPARENT_CLASSROOM': 'why_a_good_fit'},
+                }
+            ],
+            'ANSWERS': [
+                {'SURVEY_MONKEY': "143423208", 'TRANSPARENT_CLASSROOM': 'how_hear'},
+                {'SURVEY_MONKEY': "141631996", 'TRANSPARENT_CLASSROOM': 'female_head_of_household'},
+                {'SURVEY_MONKEY': "142329592", 'TRANSPARENT_CLASSROOM': 'members_in_household'},
+                {'SURVEY_MONKEY': "141641966", 'TRANSPARENT_CLASSROOM': 'income'}, # 2 member household
+                {'SURVEY_MONKEY': "141642231", 'TRANSPARENT_CLASSROOM': 'income'}, # 3 member household
+                {'SURVEY_MONKEY': "141642797", 'TRANSPARENT_CLASSROOM': 'income'}, # 4 member household
+                {'SURVEY_MONKEY': "141643440", 'TRANSPARENT_CLASSROOM': 'income'}, # 5 member household
+                {'SURVEY_MONKEY': "141643673", 'TRANSPARENT_CLASSROOM': 'income'}, # 6 member household
+                {'SURVEY_MONKEY': "141643895", 'TRANSPARENT_CLASSROOM': 'income'}, # 7 member household
+                {'SURVEY_MONKEY': "141644107", 'TRANSPARENT_CLASSROOM': 'income'}, # 8 member household
+                {'SURVEY_MONKEY': "81257131", 'TRANSPARENT_CLASSROOM': 'income'}, # other
+            ]
+        }
     }
 }
 

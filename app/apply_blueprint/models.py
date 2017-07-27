@@ -192,7 +192,14 @@ class Application(object):
         for child in self.children:
             child.age_on = lambda d, child=child: dateutil.relativedelta.relativedelta(dateutil.parser.parse(d), dateutil.parser.parse(child.dob.value)).years
         for parent in self.parents:
-            parent.phone.validator = lambda parent=parent: not parent.phone.value or re.match('^\D*(\d\D*){6,}$', parent.phone.value) != None
+            if hasattr(parent, "phone"):
+                parent.phone.validator = lambda parent=parent: not parent.phone.value or re.match('^\D*(\d\D*){6,}$', parent.phone.value) != None
+            if hasattr(parent, "home_phone"):
+                parent.home_phone.validator = lambda parent=parent: not parent.home_phone.value or re.match('^\D*(\d\D*){6,}$', parent.home_phone.value) != None
+            if hasattr(parent, "business_phone"):
+                parent.business_phone.validator = lambda parent=parent: not parent.business_phone.value or re.match('^\D*(\d\D*){6,}$', parent.business_phone.value) != None
+            if hasattr(parent, "mobile_phone"):
+                parent.mobile_phone.validator = lambda parent=parent: not parent.mobile_phone.value or re.match('^\D*(\d\D*){6,}$', parent.mobile_phone.value) != None
 
     class Model(object):
         def __repr__(self):
@@ -323,6 +330,8 @@ class Application(object):
                 template_string = s3.get_object(Bucket=app.config['APPLY_S3_BUCKET'], Key=school.s3_template_path)['Body'].read().decode('utf-8')
             except Exception as e:
                 pass
+            print "XXX"
+            print template_string
             message = {
                 "subject": "Next steps for your application to {0}".format(school.name),
                 "sender": school.email,
