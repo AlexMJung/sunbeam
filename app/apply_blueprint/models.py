@@ -330,8 +330,6 @@ class Application(object):
                 template_string = s3.get_object(Bucket=app.config['APPLY_S3_BUCKET'], Key=school.s3_template_path)['Body'].read().decode('utf-8')
             except Exception as e:
                 pass
-            print "XXX"
-            print template_string
             message = {
                 "subject": "Next steps for your application to {0}".format(school.name),
                 "sender": school.email,
