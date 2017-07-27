@@ -14,12 +14,12 @@ from flask_mail import Mail, Message
 import boto3
 import botocore.client
 
-# class MailWithLogging(Mail):
-#     def send(self, message):
-#         app.logger.critical(message)
-#         super(Mail, self).send(message)
-#
-# mail = MailWithLogging(app)
+class MailWithLogging(Mail):
+    def send(self, message):
+        app.logger.critical(message)
+        super(Mail, self).send(message)
+
+mail = MailWithLogging(app)
 
 mail = Mail(app)
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
@@ -214,6 +214,9 @@ class Application(object):
             self.value = value
             self.survey_monkey_question_id = survey_monkey_question_id
             self.transparent_classroom_key = transparent_classroom_key
+
+        def __unicode__(self):
+            return self.__str__()
 
         def __str__(self):
             if type(self.value) == list:

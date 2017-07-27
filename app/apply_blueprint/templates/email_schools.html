@@ -3,7 +3,9 @@
 
 <h3>Child</h3>
 <div>
-  {{ child.first_name}} {{ child.last_name}} - DOB: {{ child.dob }} - Gender: {{ child.gender }}
+  {{ child.first_name}} {{ child.last_name}} -
+  DOB: {{ child.dob }} -
+  Gender: {{ child.gender }}
 </div>
 
 <h3>Parents</h3>
@@ -11,17 +13,17 @@
   <div>
     {{ parent.first_name}} {{ parent.last_name }}<br>
     {{ parent.address }}<br>
-    {% if parent.phone and parent.phone is string %}
+    {% if parent.phone %}
       {{ parent.phone }}<br>
     {% endif %}
-    {% if parent.home_phone and parent.home_phone is string %}
+    {% if parent.home_phone and parent.home_phone.value is not none %}
       {{ parent.home_phone }} (h)<br>
     {% endif %}
-    {% if parent.mobile_phone and parent.mobile_phone.str is string %}
-      {{ parent.mobile_phone }} (m)<br>
-    {% endif %}
-    {% if parent.business_phone and parent.business_phone is string %}
+    {% if parent.business_phone and parent.business_phone.value is not none %}
       {{ parent.business_phone }} (w)<br>
+    {% endif %}
+    {% if parent.mobile_phone.value is not none  %}
+      {{ parent.mobile_phone }} (m)<br>
     {% endif %}
     <a href="mailto:{{ parent.email }}">{{ parent.email }}</a><br>
   </div>
