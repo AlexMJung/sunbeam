@@ -11,16 +11,16 @@
   <div>
     {{ parent.first_name}} {{ parent.last_name }}<br>
     {{ parent.address }}<br>
-    {% if parent.phone %}
+    {% if parent.phone and parent.phone is not none %}
       {{ parent.phone }}<br>
     {% endif %}
-    {% if parent.home_phone %}
+    {% if parent.home_phone and parent.home_phone is not none %}
       {{ parent.home_phone }} (h)<br>
     {% endif %}
-    {% if parent.mobile_phone %}
+    {% if parent.mobile_phone and parent.mobile_phone is not none %}
       {{ parent.mobile_phone }} (m)<br>
     {% endif %}
-    {% if parent.business_phone %}
+    {% if parent.business_phone and parent.business_phone is not none %}
       {{ parent.business_phone }} (w)<br>
     {% endif %}
     <a href="mailto:{{ parent.email }}">{{ parent.email }}</a><br>
