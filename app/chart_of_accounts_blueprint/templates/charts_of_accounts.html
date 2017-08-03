@@ -1,9 +1,9 @@
-{% extends "qbo_layout.html" %}
+{% extends "chart_of_accounts_layout.html" %}
 {% block body %}
 
 {% for f in files %}
   {% if f.mimeType == "application/vnd.google-apps.folder" %}
-    <a href="{{ url_for(blueprint_name + ".charts_of_accounts", id = f.id)}}"> 📁
+    <a href="{{ url_for(blueprint_name + ".index", id = f.id)}}"> 📁
   {% elif f.mimeType == "application/vnd.google-apps.spreadsheet" %}
     <a href="{{ url_for(blueprint_name + ".set_chart_of_accounts", sheet_id = f.id) }}"> 🌱
   {% endif %}

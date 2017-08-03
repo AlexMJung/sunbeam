@@ -1,0 +1,4 @@
+import os
+
+GSUITE_CLIENT_ID = os.environ['GSUITE_CLIENT_ID']
+GSUITE_CLIENT_SECRET = os.environ['GSUITE_CLIENT_SECRET']
