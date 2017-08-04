@@ -3,35 +3,39 @@ from app import app
 from app.authorize_qbo_blueprint.models import qbo, AuthenticationTokens
 
 class Parent(object):
-    def __init__(self, tc_id, qbo_id, first_name, last_name, email, children):
+    def __init__(self, tc_id, qbo_id, qbo_sync_token, first_name, last_name, email, children):
         self.tc_id = tc_id
         self.qbo_id = qbo_id
+        self.qbo_sync_token = qbo_sync_token
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
         self.children = children
 
     def to_qbo(self):
-        return json.dumps({
-            "Customer": {
-                "GivenName": self.first_name,
-                "FamilyName": self.last_name,
-                "Display Name": "{0} {1}".format(self.first_name, self.last_name),
-                "PrimaryEmailAddr": {
-                    "Address": self.email
-                },
-                "Notes": json.dumps({
+        return {
+            "sparse": True,
+            "Id": self.qbo_id,
+            "SyncToken": self.qbo_sync_token,
+            "GivenName": self.first_name,
+            "FamilyName": self.last_name,
+            "DisplayName": "{0} {1}".format(self.first_name, self.last_name),
+            "PrimaryEmailAddr": {
+                "Address": self.email
+            },
+            "Notes": json.dumps(
+                {
                     "tc_id": self.tc_id,
-                    "children": [{c.name, c.program} for c in self.children]
-                })
-            }
-        })
+                    "children": [{'name': c.name, 'program': c.program} for c in self.children]
+                }
+            )
+        }
 
     @classmethod
     def from_qbo(cls, customer):
         try:
             d = json.loads(customer['Notes'])
-            return Parent(d['tc_id'], customer['Id'], customer['GivenName'], customer['FamilyName'], customer['PrimaryEmailAddr']['Address'], [Child(c.name, c.program) for c in d['children']])
+            return Parent(d['tc_id'], customer['Id'], customer['SyncToken'], customer['GivenName'], customer['FamilyName'], customer['PrimaryEmailAddr']['Address'], [Child(c["name"], c["program"]) for c in d['children']])
         except Exception as e:
             return None
 
@@ -45,7 +49,7 @@ class Parent(object):
     def parents_from_tc(cls):
         # TODO: use first parent for billing
         # TODO: use API
-        return [Parent("1", None, "First", "Last", "foo@bar.com", [Child("Child", "Program")])]
+        return [Parent("1", None, None, "ParentFirst", "ParentLast", "parent@example.com", [Child("ChildFirst ChildLast", "Program")])]
 
 class Child(object):
     def __init__(self, name, program):
@@ -60,8 +64,9 @@ def sync_parents():
         for tc_parent in Parent.parents_from_tc():
             qbo_parent = next((p for p in qbo_parents if p.tc_id == tc_parent.tc_id), None)
             if qbo_parent:
+                tc_parent.qbo_sync_token = qbo_parent.qbo_sync_token
                 tc_parent.qbo_id = qbo_parent.qbo_id
-            app.logger.info("Syncing parent: {0} {1} ({2}) ({4})".format(tc_parent.first_name, tc_parent.last_name, tc_parent.tc_id, tc_parent.qbo_id))
+            app.logger.info("Syncing parent: {0} {1} ({2}) ({3})".format(tc_parent.first_name, tc_parent.last_name, tc_parent.tc_id, tc_parent.qbo_id))
             response = qbo.post("https://quickbooks.api.intuit.com/v3/company/{0}/customer".format(company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=tc_parent.to_qbo())
             if response.status != 200:
                 raise LookupError, "create {0} {1} {2}".format(response.status, response.data, tc_parent)
