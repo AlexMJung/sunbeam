@@ -19,6 +19,12 @@ qbo = OAuth().remote_app(
 def tokengetter():
     return session['qbo_tokens']['oauth_token'], session['qbo_tokens']['oauth_token_secret']
 
+def authenticate_as(company_id):
+    authorization_tokens = AuthenticationTokens.query.filter_by(company_id=company_id).first()
+    session['qbo_tokens'] = {'oauth_token': authorization_tokens.oauth_token, 'oauth_token_secret': authorization_tokens.oauth_token_secret}
+qbo.authenticate_as = authenticate_as
+
+
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
 class Base(db.Model):
