@@ -1,7 +1,6 @@
 from apiclient import discovery
 import httplib2
 
-
 def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
     skip_list = [u'Unapplied Cash Bill Payment Expenditure', u'Unapplied Cash Payment Revenue', u'Retained Earnings', u'Sales of Product Income', u'Services', u'Uncategorized Asset', u'Uncategorized Expense', u'Uncategorized Income', u'Undeposited Funds', u'Opening Balance Equity']
 

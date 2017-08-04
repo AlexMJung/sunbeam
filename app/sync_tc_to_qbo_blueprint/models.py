@@ -1,7 +1,7 @@
 import json
 from app.authorize_qbo_blueprint.models import qbo, AuthenticationTokens
 
-class Parent(Object):
+class Parent(object):
     def __init__(self, tc_id, qbo_id, first_name, last_name, email, children):
         self.tc_id = tc_id
         self.first_name = first_name
@@ -19,7 +19,7 @@ class Parent(Object):
                     "Address": self.email
                 },
                 "Notes": json.dumps({
-                    "tc_id": self.tc_id
+                    "tc_id": self.tc_id,
                     "children": [{c.name, c.program} for c in self.children]
                 })
             }
@@ -45,12 +45,12 @@ class Parent(Object):
         # TODO: use API
         return [Parent("1", None, "First", "Last", "foo@bar.com", [Child("Child", "Program")])]
 
-class Child(Object):
+class Child(object):
     def __init__(self, name, program):
         self.name = name
         self.program = program
 
-def sync_parent():
+def sync_parents():
     app.logger.info("Syncing TC parents to QBO customers")
     for company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
         app.logger.info("Syncing QBO company id: {0}".format(company_id))
