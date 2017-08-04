@@ -1,10 +1,7 @@
 from flask import Blueprint, url_for, request, session, redirect
 from app import app
 import os
-# import models
 from oauth2client.client import OAuth2WebServerFlow, OAuth2Credentials # gsuite
-# import httplib2
-# from apiclient import discovery
 
 blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1], __name__, template_folder='templates', static_folder='static')
 

@@ -4,8 +4,6 @@ import csv
 import models
 import ast
 import click
-import time
-import requests
 
 path = os.path.dirname(os.path.realpath(__file__))
 name = path.split("/")[-1]

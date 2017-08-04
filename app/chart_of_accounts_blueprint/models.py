@@ -1,10 +1,22 @@
 from apiclient import discovery
+import httplib2
+
 
 def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
-    skip_list = [u'Retained Earnings', u'Sales of Product Income', u'Services', u'Uncategorized Asset', u'Uncategorized Expense', u'Uncategorized Income', u'Undeposited Funds', u'Opening Balance Equity']
+    skip_list = [u'Unapplied Cash Bill Payment Expenditure', u'Unapplied Cash Payment Revenue', u'Retained Earnings', u'Sales of Product Income', u'Services', u'Uncategorized Asset', u'Uncategorized Expense', u'Uncategorized Income', u'Undeposited Funds', u'Opening Balance Equity']
+
+    # important! delete accounts furthest from the root first, closer later, so that we don't try to delete an account with sub accounts
+    accounts = list(
+        reversed(
+            sorted(
+                qbo.get("https://quickbooks.api.intuit.com/v3/company/{0}/query?query=select%20%2A%20from%20account&minorversion=4".format(qbo_company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Account'],
+                key=lambda a: a['FullyQualifiedName'].count(':')
+            )
+        )
+    )
 
     # delete existing accounts, except un-delete-ables
-    for account in qbo.get("https://quickbooks.api.intuit.com/v3/company/{0}/query?query=select%20%2A%20from%20account&minorversion=4".format(qbo_company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Account']:
+    for account in accounts:
         if account['FullyQualifiedName'] not in skip_list:
             account['Active'] = False
             response = qbo.post("https://quickbooks.api.intuit.com/v3/company/{0}/account?operation=update".format(qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=account)
