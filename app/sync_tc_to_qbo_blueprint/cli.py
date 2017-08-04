@@ -2,8 +2,6 @@ from app import app
 import models
 import os
 
-
-
 path = os.path.dirname(os.path.realpath(__file__))
 name = path.split("/")[-1]
 
@@ -15,5 +13,6 @@ def cli():
 @cli.command("sync_parents")
 def sync():
     """Sync parents from TC to QBO"""
-    models.sync_parents()
+    with app.test_request_context():
+        models.sync_parents()
 cli.add_command(sync)

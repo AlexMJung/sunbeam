@@ -1,9 +1,11 @@
 import json
+from app import app
 from app.authorize_qbo_blueprint.models import qbo, AuthenticationTokens
 
 class Parent(object):
     def __init__(self, tc_id, qbo_id, first_name, last_name, email, children):
         self.tc_id = tc_id
+        self.qbo_id = qbo_id
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
@@ -26,7 +28,7 @@ class Parent(object):
         })
 
     @classmethod
-    def from_qbo(customer):
+    def from_qbo(cls, customer):
         try:
             d = json.loads(customer['Notes'])
             return Parent(d['tc_id'], customer['Id'], customer['GivenName'], customer['FamilyName'], customer['PrimaryEmailAddr']['Address'], [Child(c.name, c.program) for c in d['children']])
@@ -34,13 +36,13 @@ class Parent(object):
             return None
 
     @classmethod
-    def parents_from_qbo(company_id):
+    def parents_from_qbo(cls, company_id):
         qbo.authenticate_as(company_id)
         customers = qbo.get("https://quickbooks.api.intuit.com/v3/company/{0}/query?query=select%20%2A%20from%20customer&minorversion=4".format(company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Customer']
         return [p for p in [Parent.from_qbo(c) for c in customers] if p]
 
     @classmethod
-    def parents_from_tc():
+    def parents_from_tc(cls):
         # TODO: use first parent for billing
         # TODO: use API
         return [Parent("1", None, "First", "Last", "foo@bar.com", [Child("Child", "Program")])]
