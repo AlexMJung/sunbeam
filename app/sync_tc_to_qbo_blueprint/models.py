@@ -49,7 +49,8 @@ class Parent(object):
     def parents_from_tc(cls):
         # TODO: use first parent for billing
         # TODO: use API
-        return [Parent("1", None, None, "ParentFirst", "ParentLast", "parent@example.com", [Child("ChildFirst ChildLast", "Program")])]
+        return [Parent("2", None, None, "Cam", "Leonard", "cam.leonard@wildflowerschools.org", [Child("Lulu Leonards", "Full Day")]),
+                Parent("1", None, None, "Dan", "Grigsby", "dan.grigsby@wildflowerschools.org", [Child("Jack Grigsby", "Full Day")])]
 
 class Child(object):
     def __init__(self, name, program):

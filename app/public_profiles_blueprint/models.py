@@ -60,9 +60,7 @@ class PublicProfile(Base):
     # update isn't exactly correct; can also include delete and create; handles case where was public now private
     @classmethod
     def update_profile_from_slack_event(cls, user):
-        profile = PublicProfile.query.filter_by(slack_id=user['id']).first()
-        if profile:
-            db.session.delete(profile)
+        db.session.query(PublicProfile).filter_by(slack_id=user['id']).delete()
         if not user['deleted']: # update
             new_profile = PublicProfile.create_for(user['id'])
             if new_profile:
