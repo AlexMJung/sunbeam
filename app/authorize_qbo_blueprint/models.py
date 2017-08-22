@@ -11,8 +11,8 @@ qbo = OAuth().remote_app(
     request_token_url = 'https://oauth.intuit.com/oauth/v1/get_request_token',
     access_token_url  = 'https://oauth.intuit.com/oauth/v1/get_access_token',
     authorize_url     = 'https://appcenter.intuit.com/Connect/Begin',
-    consumer_key      = app.config['QBO_CONSUMER_KEY'],
-    consumer_secret   = app.config['QBO_CONSUMER_SECRET']
+    consumer_key      = "TMP", # app.config['QBO_CONSUMER_KEY'],
+    consumer_secret   = "TMP", #app.config['QBO_CONSUMER_SECRET']
 )
 
 @qbo.tokengetter
