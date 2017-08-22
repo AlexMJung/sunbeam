@@ -6,14 +6,12 @@ import httplib2
 from apiclient import discovery
 from flask_oauthlib.client import OAuth # qbo
 
-print app.config
-
 qbo = OAuth().remote_app(
     'qbo',
     request_token_url = 'https://oauth.intuit.com/oauth/v1/get_request_token',
     access_token_url  = 'https://oauth.intuit.com/oauth/v1/get_access_token',
     authorize_url     = 'https://appcenter.intuit.com/Connect/Begin',
-    consumer_key      = "TMP", # app.config['QBO_CONSUMER_KEY'],
+    consumer_key      = app.config['QBO_CONSUMER_KEY'],
     consumer_secret   = "TMP" # app.config['QBO_CONSUMER_SECRET']
 )
 
