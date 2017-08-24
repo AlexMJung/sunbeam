@@ -2,6 +2,9 @@ import json
 from app import app, db
 from app.authorize_qbo_blueprint.models import qbo, AuthenticationTokens
 import requests
+import os
+
+tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
 class Base(db.Model):
     __abstract__  = True
