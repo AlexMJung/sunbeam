@@ -1,6 +1,9 @@
-from app import app
+from app import app, db
 import models
 import os
+import click
+import ast
+import csv
 
 path = os.path.dirname(os.path.realpath(__file__))
 name = path.split("/")[-1]
@@ -10,9 +13,33 @@ def cli():
     """commands for blueprint"""
     pass
 
-@cli.command("sync_parents")
+@cli.command("sync_children")
 def sync():
-    """Sync parents from TC to QBO"""
+    """Sync children from TC to QBO"""
     with app.test_request_context():
-        models.sync_parents()
+        models.sync_children()
 cli.add_command(sync)
+
+@cli.command("seed_from_csvs")
+def seed_from_csvs():
+    """Seed from CSV"""
+    seeds = []
+    for f in [f for f in os.listdir("{0}/seeds/".format(path))]:
+        parts = f.split(".")
+        if parts[1] == os.environ['APP_CONFIG_MODE']:
+            model_name = parts[0]
+            with open("{0}/seeds/{1}".format(path, f), 'rb') as f:
+                click.echo("Seeding {0}".format(model_name))
+                for d in csv.DictReader(f):
+                    seeds.append(populate(eval("models.{0}()".format(model_name)), d))
+    db.session.add_all(seeds)
+    db.session.commit()
+cli.add_command(seed_from_csvs)
+
+def populate(seed, dict):
+    for k in dict.keys():
+        try:
+            setattr(seed, k, ast.literal_eval("{0}".format(dict[k])))
+        except Exception as e:
+            setattr(seed, k, ast.literal_eval("\"{0}\"".format(dict[k])))
+    return seed
