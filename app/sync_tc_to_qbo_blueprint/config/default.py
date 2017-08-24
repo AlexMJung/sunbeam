@@ -1,3 +1,4 @@
 import os
 
 TRANSPARENT_CLASSROOM_API_TOKEN = os.environ['TRANSPARENT_CLASSROOM_API_TOKEN']
+TRANSPARENT_CLASSROOM_BASE_URL = "https://www.transparentclassroom.com"
