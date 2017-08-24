@@ -1,7 +1,18 @@
 import json
-from app import app
+from app import app, db
 from app.authorize_qbo_blueprint.models import qbo, AuthenticationTokens
 import requests
+
+class Base(db.Model):
+    __abstract__  = True
+    id = db.Column(db.Integer, primary_key=True)
+    date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
+    date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+
+class School(Base):
+    __tablename__ = "{0}_school".format(tablename_prefix)
+    tc_school_id = db.Column(db.Integer)
+    qbo_company_id = db.Column(db.BigInteger)
 
 class Child(object):
     def __init__(self, tc_id=None, tc_program=None, qbo_id=None, qbo_sync_token=None, first_name="", last_name="", email=""):
@@ -12,6 +23,9 @@ class Child(object):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
+
+    def __str__(self):
+        return str(self.__class__) + ": " + str(self.__dict__)
 
     def to_qbo(self):
         return {
@@ -79,17 +93,18 @@ class Child(object):
                     qbo_sync_token = None,
                     first_name     = child['first_name'],
                     last_name      = child['last_name'],
-                    email          = ", ".join([p.email for p in parents])
+                    email          = ", ".join([p['email'] for p in parents])
                 )
+                print child
                 children.append(child)
         return children;
 
 def sync_children():
     app.logger.info("Syncing TC children to QBO customers")
-    for company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
+    for qbo_company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
         app.logger.info("Syncing QBO company id: {0}".format(company_id))
-        qbo_children = Child.children_from_qbo(company_id)
-        for tc_child in Child.children_from_tc():
+        qbo_children = Child.children_from_qbo(qbo_company_id)
+        for tc_child in Child.children_from_tc(School.query.filter_by(qbo_company_id=qbo_company_id).first().tc_school_id):
             qbo_child = next((c for c in qbo_children if c.tc_id == tc_child.tc_id), None)
             if qbo_child:
                 tc_child.qbo_sync_token = qbo_child.qbo_sync_token
