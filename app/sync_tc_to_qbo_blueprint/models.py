@@ -68,7 +68,7 @@ class Child(object):
     @classmethod
     def children_from_qbo(cls, company_id):
         qbo.authenticate_as(company_id)
-        customers = qbo.get("https://quickbooks.api.intuit.com/v3/company/{0}/query?query=select%20%2A%20from%20customer&minorversion=4".format(company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Customer']
+        customers = qbo.get("https://quickbooks.api.intuit.com/v3/company/{0}/query?query=select%20%2A%20from%20customer&minorversion=4".format(company_id), headers={'Accept': 'application/json'}).data['QueryResponse'].get('Customer', [])
         return [child for child in [Child.from_qbo(customer) for customer in customers] if child]
 
     @classmethod
@@ -105,7 +105,7 @@ class Child(object):
 def sync_children():
     app.logger.info("Syncing TC children to QBO customers")
     for qbo_company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
-        app.logger.info("Syncing QBO company id: {0}".format(company_id))
+        app.logger.info("Syncing QBO company id: {0}".format(qbo_company_id))
         qbo_children = Child.children_from_qbo(qbo_company_id)
         for tc_child in Child.children_from_tc(School.query.filter_by(qbo_company_id=qbo_company_id).first().tc_school_id):
             qbo_child = next((c for c in qbo_children if c.tc_id == tc_child.tc_id), None)
@@ -113,6 +113,6 @@ def sync_children():
                 tc_child.qbo_sync_token = qbo_child.qbo_sync_token
                 tc_child.qbo_id = qbo_child.qbo_id
             app.logger.info("Syncing child: {0} {1} ({2}) ({3})".format(tc_child.first_name, tc_child.last_name, tc_child.tc_id, tc_child.qbo_id))
-            response = qbo.post("https://quickbooks.api.intuit.com/v3/company/{0}/customer".format(company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=tc_child.to_qbo())
+            response = qbo.post("https://quickbooks.api.intuit.com/v3/company/{0}/customer".format(qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=tc_child.to_qbo())
             if response.status != 200:
                 raise LookupError, "create {0} {1} {2}".format(response.status, response.data, tc_parent)
