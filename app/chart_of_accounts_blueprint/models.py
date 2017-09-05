@@ -8,7 +8,7 @@ def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
     accounts = list(
         reversed(
             sorted(
-                qbo.get("https://quickbooks.api.intuit.com/v3/company/{0}/query?query=select%20%2A%20from%20account&minorversion=4".format(qbo_company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Account'],
+                qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Account'],
                 key=lambda a: a['FullyQualifiedName'].count(':')
             )
         )
@@ -18,7 +18,7 @@ def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
     for account in accounts:
         if account['FullyQualifiedName'] not in skip_list:
             account['Active'] = False
-            response = qbo.post("https://quickbooks.api.intuit.com/v3/company/{0}/account?operation=update".format(qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=account)
+            response = qbo.post("{0}/v3/company/{1}/account?operation=update".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=account)
             if response.status != 200:
                 raise LookupError, "update {0} {1} {2}".format(response.status, response.data, account)
 
@@ -49,7 +49,7 @@ def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
             else:
                 accounts[i]['Name'] = fqn
 
-            response = qbo.post("https://quickbooks.api.intuit.com/v3/company/{0}/account".format(qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=accounts[i])
+            response = qbo.post("{0}/v3/company/{1}/account".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=accounts[i])
             if response.status != 200:
                 raise LookupError, "create {0} {1} {2}".format(response.status, response.data, account)
             accounts[i]['Id'] = response.data['Account']['Id']
