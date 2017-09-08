@@ -27,24 +27,35 @@ qbo = OAuth().remote_app(
     request_token_url    = None,
     request_token_params = {'scope': 'com.intuit.quickbooks.accounting com.intuit.quickbooks.payment', 'state': 'none'}, # state param required by Intuit
     access_token_method  = 'POST',
-    authorize_url     = 'https://appcenter.intuit.com/connect/oauth2',
-    access_token_url='https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+    authorize_url        = 'https://appcenter.intuit.com/connect/oauth2',
+    access_token_url     ='https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
 )
 
 @qbo.tokengetter
 def tokengetter():
-    return (AuthenticationTokens.query.filter_by(company_id=session['qbo_company_id']).first().access_token, '')
+    return { "access_token": AuthenticationTokens.query.filter_by(company_id=session['qbo_company_id']).first().access_token }
 
 def authenticate_as(company_id):
-    session['qbo_company_id'] = company_id;
-qbo.authenticate_as = authenticate_as
+    with app.app_context():
+        session['qbo_company_id'] = company_id;
 
-def store_authentication_tokens(tokens, company_id):
-    authorization_tokens = AuthenticationTokens.query.filter_by(company_id=company_id).first()
-    if authorization_tokens is None:
-        authorization_tokens = AuthenticationTokens(company_id=company_id)
-    authorization_tokens.access_token = tokens['access_token']
-    authorization_tokens.refresh_token = tokens['refresh_token']
-    db.session.add(authorization_tokens)
-    db.session.commit()
-qbo.store_authentication_tokens = store_authentication_tokens
+def store_authentication_tokens(tokens):
+    with app.app_context():
+        authorization_tokens = AuthenticationTokens.query.filter_by(company_id=session['qbo_company_id']).first()
+        if authorization_tokens is None:
+            authorization_tokens = AuthenticationTokens(company_id=session['qbo_company_id'])
+        authorization_tokens.access_token = tokens['access_token']
+        authorization_tokens.refresh_token = tokens['refresh_token']
+        db.session.add(authorization_tokens)
+        db.session.commit()
+
+def refresh_authentication_tokens():
+    with app.app_context():
+        resp = qbo.post(
+            qbo.access_token_url, data = {
+                'grant_type': 'refresh_token',
+                'refresh_token': AuthenticationTokens.query.filter_by(company_id=session['qbo_company_id']).first().refresh_token
+            }
+        )
+        print resp
+        store_authentication_tokens(resp)
