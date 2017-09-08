@@ -1,16 +1,16 @@
 from app import app
 from apiclient import discovery
 import httplib2
+from app.authorize_qbo_blueprint.models import QBO
 
-
-def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
+def update_chart_of_accounts(qbo_company_id, gsuite_credentials, sheet_id):
+    qbo = QBO(qbo_company_id).client()
     skip_list = [u'Unapplied Cash Bill Payment Expenditure', u'Unapplied Cash Payment Revenue', u'Retained Earnings', u'Sales of Product Income', u'Services', u'Uncategorized Asset', u'Uncategorized Expense', u'Uncategorized Income', u'Undeposited Funds', u'Opening Balance Equity']
-
     # important! delete accounts furthest from the root first, closer later, so that we don't try to delete an account with sub accounts
     accounts = list(
         reversed(
             sorted(
-                qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), headers={'Accept': 'application/json'}).data['QueryResponse']['Account'],
+                qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Account'],
                 key=lambda a: a['FullyQualifiedName'].count(':')
             )
         )
@@ -20,9 +20,13 @@ def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
     for account in accounts:
         if account['FullyQualifiedName'] not in skip_list:
             account['Active'] = False
-            response = qbo.post("{0}/v3/company/{1}/account?operation=update".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=account)
-            if response.status != 200:
-                raise LookupError, "update {0} {1} {2}".format(response.status, response.data, account)
+            response = qbo.post(
+                "{0}/v3/company/{1}/account?operation=update".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id),
+                headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'},
+                json=account
+            )
+            if response.status_code != 200:
+                raise LookupError, "update {0} {1} {2}".format(response.status_code, response.json(), account)
 
     # get chart of accounts from google sheet
     http_auth = gsuite_credentials.authorize(httplib2.Http())
@@ -50,8 +54,11 @@ def update_chart_of_accounts(qbo, qbo_company_id, gsuite_credentials, sheet_id):
                 accounts[i]['ParentRef'] = {"value": parent_account["Id"]}
             else:
                 accounts[i]['Name'] = fqn
-
-            response = qbo.post("{0}/v3/company/{1}/account".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=accounts[i])
-            if response.status != 200:
-                raise LookupError, "create {0} {1} {2}".format(response.status, response.data, account)
-            accounts[i]['Id'] = response.data['Account']['Id']
+            response = qbo.post(
+                "{0}/v3/company/{1}/account".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id),
+                headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'},
+                json=accounts[i]
+            )
+            if response.status_code != 200:
+                raise LookupError, "create {0} {1} {2}".format(response.status_code, response.json(), account)
+            accounts[i]['Id'] = response.json()['Account']['Id']

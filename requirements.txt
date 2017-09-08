@@ -15,5 +15,5 @@ marshmallow-sqlalchemy
 flask-cors
 nltk
 boto3
-Flask-OAuthlib
 google-api-python-client
+requests_oauthlib

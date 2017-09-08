@@ -30,9 +30,9 @@ class BankAccount(object):
         }
 
     def save(self):
-        response = qbo.post("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}, data=self.data())
-        if response.status != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status, response.data, self)
+        response = qbo.post("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}, json=self.data())
+        if response.status_code != 201:
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
 
 
 

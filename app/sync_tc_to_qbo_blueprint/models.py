@@ -1,6 +1,6 @@
 import json
 from app import app, db
-from app.authorize_qbo_blueprint.models import qbo, AuthenticationTokens
+from app.authorize_qbo_blueprint.models import QBO, AuthenticationTokens
 import requests
 import os
 
@@ -66,7 +66,7 @@ class Child(object):
             return None
 
     @classmethod
-    def children_from_qbo(cls):
+    def children_from_qbo(cls, qbo):
         customers = qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'}).data['QueryResponse'].get('Customer', [])
         return [child for child in [Child.from_qbo(customer) for customer in customers] if child]
 
@@ -105,15 +105,18 @@ def sync_children():
     app.logger.info("Syncing TC children to QBO customers")
     for qbo_company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
         app.logger.info("Syncing QBO company id: {0}".format(qbo_company_id))
-        qbo.authenticate_as(company_id)
-        qbo_children = Child.children_from_qbo()
+        qbo = QBO(qbo_company_id).client()
+        qbo_children = Child.children_from_qbo(qbo)
         for tc_child in Child.children_from_tc(School.query.filter_by(qbo_company_id=qbo_company_id).first().tc_school_id):
             qbo_child = next((c for c in qbo_children if c.tc_id == tc_child.tc_id), None)
             if qbo_child:
                 tc_child.qbo_sync_token = qbo_child.qbo_sync_token
                 tc_child.qbo_id = qbo_child.qbo_id
             app.logger.info("Syncing child: {0} {1} ({2}) ({3})".format(tc_child.first_name, tc_child.last_name, tc_child.tc_id, tc_child.qbo_id))
-
-            response = qbo.post("{0}/v3/company/{1}/customer".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), format='json', headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'}, data=tc_child.to_qbo())
-            if response.status != 200:
-                raise LookupError, "create {0} {1} {2}".format(response.status, response.data, tc_parent)
+            response = qbo.post(
+                "{0}/v3/company/{1}/customer".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id),
+                headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'},
+                json=tc_child.to_qbo()
+            )
+            if response.status_code != 200:
+                raise LookupError, "create {0} {1} {2}".format(response.status_code, response.json(), tc_parent)

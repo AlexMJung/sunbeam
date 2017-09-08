@@ -5,7 +5,6 @@ import models
 from oauth2client.client import OAuth2Credentials # gsuite
 import httplib2
 from apiclient import discovery
-from app.authorize_qbo_blueprint.models import qbo
 
 blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1], __name__, template_folder='templates', static_folder='static')
 
@@ -29,5 +28,5 @@ def set_chart_of_accounts(sheet_id):
 
 @blueprint.route("/update_chart_of_accounts")
 def update_chart_of_accounts():
-    models.update_chart_of_accounts(qbo, session['qbo_company_id'], OAuth2Credentials.from_json(session['gsuite_credentials']), session['sheet_id'])
+    models.update_chart_of_accounts(session['qbo_company_id'], OAuth2Credentials.from_json(session['gsuite_credentials']), session['sheet_id'])
     return render_template('update_chart_of_accounts.html')
