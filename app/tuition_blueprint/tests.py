@@ -25,14 +25,14 @@ class TestCase(unittest.TestCase):
     def test_credit_card(self):
         with app.test_request_context():
             # delete previously saved card
-            cards = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), headers={'Accept': 'application/json'}).json()
-            card = next((c for c in cards if c['number'] == "xxxxxxxxxxxx1111"), None)
-            if card:
+            qbo_cards = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), headers={'Accept': 'application/json'}).json()
+            qbo_card = next((c for c in qbo_cards if c['number'] == "xxxxxxxxxxxx1111"), None)
+            if qbo_card:
                 self.qbo_client.delete(
-                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id, card['id']),
+                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id, qbo_card['id']),
                     headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
                 )
-            # don't use QBO client - this API does not - can not - have auth
+            # don't use qbo_client for this - this API does not - can not - have auth
             res = requests.post(
                 "{0}/quickbooks/v4/payments/tokens".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
                 headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
@@ -54,4 +54,6 @@ class TestCase(unittest.TestCase):
                 }
             )
             token = res.json()['value']
-            models.CreditCard(customer_id=self.customer_id, token=token, qbo_client=self.qbo_client).save()
+            card = models.CreditCard(customer_id=self.customer_id, token=token, qbo_client=self.qbo_client)
+            card.save()
+            card.charge(123.45)
