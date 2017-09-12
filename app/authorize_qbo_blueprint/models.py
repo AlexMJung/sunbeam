@@ -34,7 +34,7 @@ class QBO():
     def client(self):
         authorization_tokens = AuthenticationTokens.query.filter_by(company_id=self.company_id).first()
         if authorization_tokens:
-            return OAuth2Session(
+            client = OAuth2Session(
                 app.config['QBO_CLIENT_ID'],
                 token = {
                     'access_token': authorization_tokens.access_token,
@@ -43,6 +43,11 @@ class QBO():
                     'expires_in': 3600 - (datetime.datetime.now() - authorization_tokens.date_modified).total_seconds()
                 },
                 auto_refresh_url = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+                auto_refresh_kwargs = {
+                    'client_id': app.config['QBO_CLIENT_ID'],
+                    'client_secret': app.config['QBO_CLIENT_SECRET']
+                },
                 token_updater = self.save_tokens
             )
+            return client
         return None
