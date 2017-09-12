@@ -3,15 +3,18 @@ import os
 import uuid
 from app.authorize_qbo_blueprint.models import QBO
 
-tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
+class QBOModel(object):
+    def save(self, qbo):
+        response = qbo.post(
+            self.url,
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+            json=self.data()
+        )
+        if response.status_code != 201:
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
+        return response
 
-class Base(db.Model):
-    __abstract__  = True
-    id = db.Column(db.Integer, primary_key=True)
-    date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
-    date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
-
-class BankAccount(object):
+class BankAccount(QBOModel):
     def __init__(self, customer_id=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None):
         self.customer_id = customer_id
         self.name = name
@@ -19,6 +22,7 @@ class BankAccount(object):
         self.account_number = account_number
         self.account_type = account_type
         self.phone = phone
+        self.url = "{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id)
 
     def data(self):
         return {
@@ -29,23 +33,21 @@ class BankAccount(object):
             "phone": self.phone
         }
 
-    def save(self, qbo):
-        response = qbo.post(
-            "{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
-            json=self.data()
-        )
-        if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
 
+class CreditCard(QBOModel):
+    # We only create cards via tokens.  This allows us to use a client-side form to interact with
+    # Intuit's API to store the CC, allowing us to avoid PCI compliance hassles.
 
+    def __init__(self, customer_id=None, token=None):
+        self.customer_id = customer_id
+        self.token = token
+        self.url = "{0}/quickbooks/v4/customers/{1}/cards/createFromToken".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id)
 
+    def data(self):
+        return {
+            "value": self.token
+        }
 
-
-
-# use payments api
-# store CC
-# store ACH for future use
 
 # - connect to QB customer by using ID appropriately
 
@@ -53,8 +55,6 @@ class BankAccount(object):
 # - use CreditCardPayment
 
 # - use automatic reconciliation for CC
-
-
 # no related thing for echeck?
 
 
@@ -63,3 +63,11 @@ class BankAccount(object):
 # send sales receipt to parent(s)
 
 # specify where deposited to?
+
+# tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
+#
+# class Base(db.Model):
+#     __abstract__  = True
+#     id = db.Column(db.Integer, primary_key=True)
+#     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
+#     date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
