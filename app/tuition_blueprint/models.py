@@ -11,7 +11,7 @@ class QBOPaymentsModel(object):
             json=self.data()
         )
         if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
         self.id = response.json()['id']
         return self.id
 
@@ -41,22 +41,6 @@ class BankAccount(QBOPaymentsModel):
             "phone": self.phone
         }
 
-    def debit(self, amount):
-        response = self.qbo_client.post(
-            "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
-            json={
-                "amount": str(amount),
-                "paymentMode": "WEB",
-                "bankAccountOnFile": str(self.id)
-            }
-        )
-        if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
-        self.id = response.json()['id']
-        self.status = response.json()['status']
-        return (self.id, self.status)
-
 class CreditCard(QBOPaymentsModel):
     # We only create cards via tokens.  This allows us to use a client-side form to interact with
     # Intuit's API to store the CC, allowing us to avoid PCI compliance hassles.
@@ -74,23 +58,6 @@ class CreditCard(QBOPaymentsModel):
             "value": self.token
         }
 
-    def charge(self, amount):
-        response = self.qbo_client.post(
-            "{0}/quickbooks/v4/payments/charges".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
-            json={
-                "amount": str(amount),
-                "currency": "USD",
-                "cardOnFile": str(self.id)
-            }
-        )
-        if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
-        data = response.json()
-        self.id = data['id']
-        self.status = data['status']
-        return (self.id, self.status)
-
 class QBOAccountingModel(object):
     def save(self):
         response = self.qbo_client.post(
@@ -99,7 +66,7 @@ class QBOAccountingModel(object):
             json=self.data()
         )
         if response.status_code != 200:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
         self.id = response.json()[self.__class__.__name__]["Id"]
         return self.id
 
@@ -173,20 +140,78 @@ class Deposit(QBOAccountingModel):
             ]
         }
 
+class Base(db.Model):
+    __abstract__  = True
+    id = db.Column(db.Integer, primary_key=True)
+    date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
+    date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
-# handle failed CC (instant) XXX HERE !!!
-# handle failed echeck (delayed) XXX HERE !!!
+tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
+
+class Payment(Base):
+    __tablename__ = "{0}_school".format(tablename_prefix)
+    qbo_id = db.Column(db.String(120))
+    method = db.Column(db.String(120))
+    status = db.Column(db.String(120))
+
+    @classmethod
+    def payment_from_bank_account(cls, bank_account, amount, qbo_client):
+        response = qbo_client.post(
+            "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+            json={
+                "amount": str(amount),
+                "paymentMode": "WEB",
+                "bankAccountOnFile": str(bank_account.id)
+            }
+        )
+        if response.status_code != 201:
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
+        data = response.json()
+        return Payment(
+            method="BankAccount",
+            qbo_id=data['id'],
+            status=data['status']
+        )
+
+    @classmethod
+    def payment_from_credit_card(cls, credit_card, amount, qbo_client):
+        response = qbo_client.post(
+            "{0}/quickbooks/v4/payments/charges".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+            json={
+                "amount": str(amount),
+                "currency": "USD",
+                "cardOnFile": str(credit_card.id)
+            }
+        )
+        if response.status_code != 201:
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
+        data = response.json()
+        return Payment(
+            method="CreditCard",
+            qbo_id=data['id'],
+            status=data['status']
+        )
+
+    def update_status_from_qbo(self, qbo_client):
+        if self.method == "CreditCard":
+            url = "{0}/quickbooks/v4/payments/charges/{1}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.qbo_id)
+        elif self.method == "BankAccount":
+            url = "{0}/quickbooks/v4/payments/echecks/{1}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.qbo_id)
+        response = qbo_client.get(
+            url,
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+        )
+        if response.status_code != 200:
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
+        self.status = response.json()['status']
+        return self.status
+
+
+
 # send sales receipt to parent(s) XXX HERE !!!
 # make deposit show/link/note echeck payment XXX HERE !!!
 
 
 # use API to get all services - or things they sell - and use that to let them select which thing to sell for full day, half day, etc
-
-
-# tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
-#
-# class Base(db.Model):
-#     __abstract__  = True
-#     id = db.Column(db.Integer, primary_key=True)
-#     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
-#     date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
