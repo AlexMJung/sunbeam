@@ -12,15 +12,17 @@ blueprint_name = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
 class TestCase(unittest.TestCase):
     def setUp(self):
-        company_id = AuthenticationTokens.query.first().company_id
-        self.qbo_client = QBO(company_id).client()
-        self.customer_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Customer'][0]['Id']
+        self.company_id = AuthenticationTokens.query.first().company_id
+        self.qbo_client = QBO(self.company_id).client()
+        self.customer_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Customer'][0]['Id']
 
-    def test_save_bank_account(self):
+    def test_bank_account(self):
         with app.test_request_context():
             bank_account = models.BankAccount(customer_id=self.customer_id, name="Name", routing_number="121042882", account_number=str(randint(1000, 99999999999999999)), account_type="PERSONAL_CHECKING", phone="6128675309", qbo_client=self.qbo_client)
             bank_account.save()
-            bank_account.debit(123.45)
+            bank_account.debit(5.55)
+            item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
+            models.SalesReceipt(company_id=self.company_id, customer_id=self.customer_id, item_id=item_id, amount=5.55, qbo_client=self.qbo_client).save()
 
     def test_credit_card(self):
         with app.test_request_context():
@@ -56,4 +58,6 @@ class TestCase(unittest.TestCase):
             token = res.json()['value']
             card = models.CreditCard(customer_id=self.customer_id, token=token, qbo_client=self.qbo_client)
             card.save()
-            card.charge(123.45)
+            cc_trans_id = card.charge(123.45)
+            item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
+            models.SalesReceipt(company_id=self.company_id, customer_id=self.customer_id, item_id=item_id, amount=123.45, cc_trans_id=cc_trans_id, qbo_client=self.qbo_client).save()

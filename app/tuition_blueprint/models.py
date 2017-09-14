@@ -3,7 +3,7 @@ import os
 import uuid
 from app.authorize_qbo_blueprint.models import QBO
 
-class QBOModel(object):
+class QBOPaymentsModel(object):
     def save(self):
         response = self.qbo_client.post(
             self.url,
@@ -14,7 +14,7 @@ class QBOModel(object):
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
         self.id = response.json()['id']
 
-class BankAccount(QBOModel):
+class BankAccount(QBOPaymentsModel):
     def __init__(self, id=None, customer_id=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
         self.id = id
         self.customer_id = customer_id
@@ -52,7 +52,7 @@ class BankAccount(QBOModel):
         if response.status_code != 201:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
 
-class CreditCard(QBOModel):
+class CreditCard(QBOPaymentsModel):
     # We only create cards via tokens.  This allows us to use a client-side form to interact with
     # Intuit's API to store the CC, allowing us to avoid PCI compliance hassles.
 
@@ -79,8 +79,71 @@ class CreditCard(QBOModel):
         )
         if response.status_code != 201:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
+        return response.json()['id']
+
+class QBOAccountingModel(object):
+    def save(self):
+        response = self.qbo_client.post(
+            self.url,
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+            json=self.data()
+        )
+        if response.status_code != 200:
+                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
+        self.id = response.json()[self.__class__.__name__]["Id"]
 
 
+class SalesReceipt(QBOAccountingModel):
+    def __init__(self, id=None, company_id=None, customer_id=None, item_id=None, amount=None, cc_trans_id=None, qbo_client=None):
+        self.id = id
+        self.company_id=company_id
+        self.customer_id=customer_id
+        self.item_id=item_id
+        self.amount=amount
+        self.cc_trans_id=cc_trans_id
+        self.qbo_client=qbo_client
+        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id)
+
+    def data(self):
+        data = {
+            "Line": [{
+                "Amount": self.amount,
+                "DetailType": "SalesItemLineDetail",
+                "SalesItemLineDetail": {
+                    "ItemRef": {
+                        "value": str(self.item_id)
+                    },
+                    "UnitPrice": self.amount,
+                    "Qty": 1
+                }
+            }],
+            "CustomerRef": {
+                "value": str(self.customer_id)
+            },
+            "TxnSource": "IntuitPayment"
+        }
+
+        # this is, according to the docs, sufficient to automatically create and reconcile the deposit
+        if (self.cc_trans_id):
+            data['CreditCardPayment'] = {
+                "CreditChargeInfo": {
+                    "ProcessPayment": "true"
+                },
+                "CreditChargeResponse": {
+                    "CCTransId": self.cc_trans_id
+                }
+            }
+        return data
+
+
+
+
+
+# handle failed CC (instant)
+# handle failed echeck (delayed)
+
+
+# use API to get all services - or things they sell - and use that to let them select which thing to sell for full day, half day, etc
 
 # - connect to QB customer by using ID appropriately
 
