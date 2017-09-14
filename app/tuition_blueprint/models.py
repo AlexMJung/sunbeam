@@ -13,10 +13,12 @@ class QBOPaymentsModel(object):
         if response.status_code != 201:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
         self.id = response.json()['id']
+        return self.id
 
 class BankAccount(QBOPaymentsModel):
-    def __init__(self, id=None, customer_id=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
+    def __init__(self, id=None, status=None, customer_id=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
         self.id = id
+        self.status = status
         self.customer_id = customer_id
         self.name = name
         self.routing_number = routing_number
@@ -51,12 +53,17 @@ class BankAccount(QBOPaymentsModel):
         )
         if response.status_code != 201:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
+        self.id = response.json()['id']
+        self.status = response.json()['status']
+        return (self.id, self.status)
 
 class CreditCard(QBOPaymentsModel):
     # We only create cards via tokens.  This allows us to use a client-side form to interact with
     # Intuit's API to store the CC, allowing us to avoid PCI compliance hassles.
 
-    def __init__(self, id=None, customer_id=None, token=None, qbo_client=None):
+    def __init__(self, id=None, status=None, customer_id=None, token=None, qbo_client=None):
+        self.id = id,
+        self.status = status,
         self.customer_id = customer_id
         self.token = token
         self.url = "{0}/quickbooks/v4/customers/{1}/cards/createFromToken".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id)
@@ -79,7 +86,10 @@ class CreditCard(QBOPaymentsModel):
         )
         if response.status_code != 201:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
-        return response.json()['id']
+        data = response.json()
+        self.id = data['id']
+        self.status = data['status']
+        return (self.id, self.status)
 
 class QBOAccountingModel(object):
     def save(self):
@@ -91,7 +101,7 @@ class QBOAccountingModel(object):
         if response.status_code != 200:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.json(), self)
         self.id = response.json()[self.__class__.__name__]["Id"]
-
+        return self.id
 
 class SalesReceipt(QBOAccountingModel):
     def __init__(self, id=None, company_id=None, customer_id=None, item_id=None, amount=None, cc_trans_id=None, qbo_client=None):
@@ -136,32 +146,42 @@ class SalesReceipt(QBOAccountingModel):
         return data
 
 
+class Deposit(QBOAccountingModel):
+    def __init__(self, id=None, company_id=None, account_id=None, transaction_id=None, qbo_client=None):
+        self.id = id
+        self.company_id = company_id
+        self.account_id = account_id
+        self.transaction_id = transaction_id
+        self.qbo_client = qbo_client
+        self.url = "{0}/v3/company/{1}/deposit".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id)
+
+    def data(self):
+        return {
+            "DepositToAccountRef": {
+                "value": self.account_id
+            },
+            "Line":[
+                {
+                    "LinkedTxn":[
+                        {
+                            "TxnId": self.transaction_id,
+                            "TxnLineId": "0",
+                            "TxnType": "SalesReceipt"
+                        }
+                    ]
+                }
+            ]
+        }
 
 
-
-# handle failed CC (instant)
-# handle failed echeck (delayed)
+# handle failed CC (instant) XXX HERE !!!
+# handle failed echeck (delayed) XXX HERE !!!
+# send sales receipt to parent(s) XXX HERE !!!
+# make deposit show/link/note echeck payment XXX HERE !!!
 
 
 # use API to get all services - or things they sell - and use that to let them select which thing to sell for full day, half day, etc
 
-# - connect to QB customer by using ID appropriately
-
-
-
-
-# create accounting SalesReceipt
-# - use CreditCardPayment
-
-# - use automatic reconciliation for CC
-# no related thing for echeck?
-
-
-# https://developer.intuit.com/docs/0100_quickbooks_payments/0200_dev_guides/using_the_accounting_and_payments_apis_together
-
-# send sales receipt to parent(s)
-
-# specify where deposited to?
 
 # tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 #
