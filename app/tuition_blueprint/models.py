@@ -112,6 +112,13 @@ class SalesReceipt(QBOAccountingModel):
             }
         return data
 
+    def send(self):
+        response = self.qbo_client.post(
+            "{0}/v3/company/{1}/salesreceipt/{2}/send".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id, self.id),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
+        )
+        if response.status_code != 200:
+            raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
 
 class Deposit(QBOAccountingModel):
     def __init__(self, id=None, company_id=None, account_id=None, transaction_id=None, qbo_client=None):
@@ -208,9 +215,6 @@ class Payment(Base):
         self.status = response.json()['status']
         return self.status
 
-
-
-# send sales receipt to parent(s) XXX HERE !!!
 # make deposit show/link/note echeck payment XXX HERE !!!
 
 

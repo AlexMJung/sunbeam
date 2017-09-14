@@ -34,6 +34,7 @@ class TestCase(unittest.TestCase):
             item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
             sales_receipt = models.SalesReceipt(company_id=self.company_id, customer_id=self.customer_id, item_id=item_id, amount=amount, qbo_client=self.qbo_client)
             transaction_id = sales_receipt.save()
+            # sales_receipt.send() -> this is generating a 500 from QB; I /think/ it's a sandbox issue
             account_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20where%20AccountSubType%3D%27Checking%27&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Account'][0]['Id']
             models.Deposit(company_id=self.company_id, account_id=account_id, transaction_id=transaction_id, qbo_client=self.qbo_client).save()
 
