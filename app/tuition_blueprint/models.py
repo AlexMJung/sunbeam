@@ -168,9 +168,11 @@ class Payment(Base):
     qbo_id = db.Column(db.String(120))
     method = db.Column(db.String(120))
     status = db.Column(db.String(120))
+    customer_id = db.Column(db.String(120))
+    company_id = db.Column(db.String(120))
 
     @classmethod
-    def payment_from_bank_account(cls, bank_account, amount, qbo_client):
+    def payment_from_bank_account(cls, company_id, bank_account, amount, qbo_client):
         response = qbo_client.post(
             "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
@@ -186,11 +188,13 @@ class Payment(Base):
         return Payment(
             method="BankAccount",
             qbo_id=data['id'],
-            status=data['status']
+            status=data['status'],
+            customer_id=bank_account.customer.id,
+            company_id=company_id
         )
 
     @classmethod
-    def payment_from_credit_card(cls, credit_card, amount, qbo_client):
+    def payment_from_credit_card(cls, company_id, credit_card, amount, qbo_client):
         response = qbo_client.post(
             "{0}/quickbooks/v4/payments/charges".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
@@ -206,7 +210,9 @@ class Payment(Base):
         return Payment(
             method="CreditCard",
             qbo_id=data['id'],
-            status=data['status']
+            status=data['status'],
+            customer_id=credit_card.customer.id,
+            company_id=company_id
         )
 
     def update_status_from_qbo(self, qbo_client):
@@ -266,11 +272,4 @@ class Account(object):
 
 
 
-
-
-
-
-# do work to get list of services, accounts, etc. that will be necessary for automation
-#  may not need to save many - all of these...
-
-# use API to get all services - or things they sell - and use that to let them select which thing to sell for full day, half day, etc
+# update payment statuses, when echeck goes from X to Y make deposit
