@@ -127,10 +127,10 @@ class SalesReceipt(QBOAccountingModel):
             raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
 
 class Deposit(QBOAccountingModel):
-    def __init__(self, id=None, company_id=None, account_id=None, transaction_id=None, payment=None, qbo_client=None):
+    def __init__(self, id=None, company_id=None, account=None, transaction_id=None, payment=None, qbo_client=None):
         self.id = id
         self.company_id = company_id
-        self.account_id = account_id
+        self.account = account
         self.transaction_id = transaction_id
         self.payment = payment
         self.qbo_client = qbo_client
@@ -139,7 +139,7 @@ class Deposit(QBOAccountingModel):
     def data(self):
         return {
             "DepositToAccountRef": {
-                "value": self.account_id
+                "value": self.account.id
             },
             "Line":[
                 {
@@ -225,16 +225,17 @@ class Payment(Base):
 
 # can use QBOAccountingModel as base class if ever need to save
 class Customer(object):
-    def __init__(self, id=None, email=None):
+    def __init__(self, id=None, email=None, name=None):
         self.id = id
         self.email = email
+        self.name = name
 
     @classmethod
     def customers_from_qbo(cls, company_id, qbo_client):
         response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
-        return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address']) for c in response.json()['QueryResponse']['Customer']]
+        return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName']) for c in response.json()['QueryResponse']['Customer']]
 
 # can use QBOAccountingModel as base class if ever need to save
 class Item(object):
@@ -249,6 +250,21 @@ class Item(object):
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         return [Item(id=i['Id'], name=i['Name'], price=i['UnitPrice']) for i in response.json()['QueryResponse']['Item']]
+
+# can use QBOAccountingModel as base class if ever need to save
+class Account(object):
+    def __init__(self, id=None):
+        self.id = id
+
+    @classmethod
+    def deposit_account_from_qbo(cls, company_id, qbo_client):
+        # convention is that there is one checking account and it is where deposits are made - note set up implication
+        response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20where%20AccountSubType%3D%27Checking%27&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+        if response.status_code != 200:
+            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+        return Account(id=response.json()['QueryResponse']['Account'][0]['Id'])
+
+
 
 
 

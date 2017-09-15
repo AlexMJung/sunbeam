@@ -35,8 +35,8 @@ class TestCase(unittest.TestCase):
             sales_receipt = models.SalesReceipt(company_id=self.company_id, customer=self.customer, item=self.item, qbo_client=self.qbo_client)
             transaction_id = sales_receipt.save()
             sales_receipt.send()
-            account_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20where%20AccountSubType%3D%27Checking%27&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Account'][0]['Id']
-            models.Deposit(company_id=self.company_id, account_id=account_id, transaction_id=transaction_id, payment=payment, qbo_client=self.qbo_client).save()
+            account = models.Account.deposit_account_from_qbo(self.company_id, self.qbo_client)
+            models.Deposit(company_id=self.company_id, account=account, transaction_id=transaction_id, payment=payment, qbo_client=self.qbo_client).save()
 
     def test_with_credit_card(self):
         with app.test_request_context():
