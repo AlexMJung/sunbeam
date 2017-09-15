@@ -14,38 +14,38 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.company_id = AuthenticationTokens.query.first().company_id
         self.qbo_client = QBO(self.company_id).client()
-        self.customer_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Customer'][0]['Id']
+        self.customer = models.Customer.customers_from_qbo(self.company_id, self.qbo_client)[0]
 
     def test_with_bank_account(self):
         with app.test_request_context():
             # delete previously saved account
-            qbo_bank_accounts = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), headers={'Accept': 'application/json'}).json()
+            qbo_bank_accounts = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id), headers={'Accept': 'application/json'}).json()
             qbo_bank_account = next((b for b in qbo_bank_accounts if b['accountNumber'] == "xxxxxxxxxxxxx1111"), None)
             if qbo_bank_account:
                 self.qbo_client.delete(
-                    "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id, qbo_bank_account['id']),
+                    "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id, qbo_bank_account['id']),
                     headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
                 )
-            bank_account = models.BankAccount(customer_id=self.customer_id, name="Name", routing_number="121042882", account_number="11111111111111111", account_type="PERSONAL_CHECKING", phone="6128675309", qbo_client=self.qbo_client)
+            bank_account = models.BankAccount(customer=self.customer, name="Name", routing_number="121042882", account_number="11111111111111111", account_type="PERSONAL_CHECKING", phone="6128675309", qbo_client=self.qbo_client)
             bank_account.save()
             amount = 1928.37
             payment = models.Payment.payment_from_bank_account(bank_account, amount, self.qbo_client)
             payment.update_status_from_qbo(self.qbo_client)
             item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
-            sales_receipt = models.SalesReceipt(company_id=self.company_id, customer_id=self.customer_id, item_id=item_id, amount=amount, qbo_client=self.qbo_client)
+            sales_receipt = models.SalesReceipt(company_id=self.company_id, customer=self.customer, item_id=item_id, amount=amount, qbo_client=self.qbo_client)
             transaction_id = sales_receipt.save()
-            # sales_receipt.send() -> this is generating a 500 from QB; I /think/ it's a sandbox issue
+            sales_receipt.send()
             account_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20where%20AccountSubType%3D%27Checking%27&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Account'][0]['Id']
             models.Deposit(company_id=self.company_id, account_id=account_id, transaction_id=transaction_id, qbo_client=self.qbo_client).save()
 
     def test_with_credit_card(self):
         with app.test_request_context():
             # delete previously saved card
-            qbo_cards = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), headers={'Accept': 'application/json'}).json()
+            qbo_cards = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id), headers={'Accept': 'application/json'}).json()
             qbo_card = next((c for c in qbo_cards if c['number'] == "xxxxxxxxxxxx1111"), None)
             if qbo_card:
                 self.qbo_client.delete(
-                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id, qbo_card['id']),
+                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id, qbo_card['id']),
                     headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
                 )
             # don't use qbo_client for this - this API does not - can not - have auth
@@ -70,23 +70,23 @@ class TestCase(unittest.TestCase):
                 }
             )
             token = res.json()['value']
-            card = models.CreditCard(customer_id=self.customer_id, token=token, qbo_client=self.qbo_client)
+            card = models.CreditCard(customer=self.customer, token=token, qbo_client=self.qbo_client)
             card.save()
             amount = 345.67
             payment = models.Payment.payment_from_credit_card(card, amount, self.qbo_client)
             cc_trans_id = payment.qbo_id
             payment.update_status_from_qbo(self.qbo_client)
             item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
-            models.SalesReceipt(company_id=self.company_id, customer_id=self.customer_id, item_id=item_id, amount=amount, cc_trans_id=cc_trans_id, qbo_client=self.qbo_client).save()
+            models.SalesReceipt(company_id=self.company_id, customer=self.customer, item_id=item_id, amount=amount, cc_trans_id=cc_trans_id, qbo_client=self.qbo_client).save()
 
     def test_declined_credit_card(self):
         with app.test_request_context():
             # delete previously saved card
-            qbo_cards = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id), headers={'Accept': 'application/json'}).json()
+            qbo_cards = self.qbo_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id), headers={'Accept': 'application/json'}).json()
             qbo_card = next((c for c in qbo_cards if c['number'] == "xxxxxxxxxxxx1111"), None)
             if qbo_card:
                 self.qbo_client.delete(
-                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id, qbo_card['id']),
+                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id, qbo_card['id']),
                     headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
                 )
             # don't use qbo_client for this - this API does not - can not - have auth
@@ -111,8 +111,12 @@ class TestCase(unittest.TestCase):
                 }
             )
             token = res.json()['value']
-            card = models.CreditCard(customer_id=self.customer_id, token=token, qbo_client=self.qbo_client)
+            card = models.CreditCard(customer=self.customer, token=token, qbo_client=self.qbo_client)
             card.save()
             amount = 345.67
             payment = models.Payment.payment_from_credit_card(card, amount, self.qbo_client)
             assert payment.status=="DECLINED"
+
+    def test_customers(self):
+        with app.test_request_context():
+            models.Customer.customers_from_qbo(self.company_id, self.qbo_client)

@@ -16,21 +16,21 @@ class QBOPaymentsModel(object):
         return self.id
 
 class BankAccount(QBOPaymentsModel):
-    def __init__(self, id=None, status=None, customer_id=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
+    def __init__(self, id=None, status=None, customer=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
         self.id = id
         self.status = status
-        self.customer_id = customer_id
+        self.customer = customer
         self.name = name
         self.routing_number = routing_number
         self.account_number = account_number
         self.account_type = account_type
         self.phone = phone
         self.qbo_client = qbo_client
-        self.url = "{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id)
+        self.url = "{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id)
 
     @classmethod
-    def bank_account_for(cls, qbo_client, customer_id, bank_account_id):
-        return BankAccount(id=bank_account_id, customer_id=customer_id, qbo_client=qbo_client)
+    def bank_account_for(cls, qbo_client, customer, bank_account_id):
+        return BankAccount(id=bank_account_id, customer=customer, qbo_client=qbo_client)
 
     def data(self):
         return {
@@ -45,12 +45,12 @@ class CreditCard(QBOPaymentsModel):
     # We only create cards via tokens.  This allows us to use a client-side form to interact with
     # Intuit's API to store the CC, allowing us to avoid PCI compliance hassles.
 
-    def __init__(self, id=None, status=None, customer_id=None, token=None, qbo_client=None):
+    def __init__(self, id=None, status=None, customer=None, token=None, qbo_client=None):
         self.id = id,
         self.status = status,
-        self.customer_id = customer_id
+        self.customer = customer
         self.token = token
-        self.url = "{0}/quickbooks/v4/customers/{1}/cards/createFromToken".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer_id)
+        self.url = "{0}/quickbooks/v4/customers/{1}/cards/createFromToken".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id)
         self.qbo_client = qbo_client
 
     def data(self):
@@ -71,10 +71,10 @@ class QBOAccountingModel(object):
         return self.id
 
 class SalesReceipt(QBOAccountingModel):
-    def __init__(self, id=None, company_id=None, customer_id=None, item_id=None, amount=None, cc_trans_id=None, qbo_client=None):
+    def __init__(self, id=None, company_id=None, customer=None, item_id=None, amount=None, cc_trans_id=None, qbo_client=None):
         self.id = id
         self.company_id=company_id
-        self.customer_id=customer_id
+        self.customer=customer
         self.item_id=item_id
         self.amount=amount
         self.cc_trans_id=cc_trans_id
@@ -95,13 +95,18 @@ class SalesReceipt(QBOAccountingModel):
                 }
             }],
             "CustomerRef": {
-                "value": str(self.customer_id)
+                "value": str(self.customer.id)
             },
             "TxnSource": "IntuitPayment"
         }
 
+        if self.customer.email:
+            data["BillEmail"] = {
+                "Address": self.customer.email
+            }
+
         # this is, according to the docs, sufficient to automatically create and reconcile the deposit
-        if (self.cc_trans_id):
+        if self.cc_trans_id:
             data['CreditCardPayment'] = {
                 "CreditChargeInfo": {
                     "ProcessPayment": "true"
@@ -110,12 +115,13 @@ class SalesReceipt(QBOAccountingModel):
                     "CCTransId": self.cc_trans_id
                 }
             }
+
         return data
 
     def send(self):
         response = self.qbo_client.post(
             "{0}/v3/company/{1}/salesreceipt/{2}/send".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id, self.id),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
+            headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
         )
         if response.status_code != 200:
             raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
@@ -173,7 +179,7 @@ class Payment(Base):
             }
         )
         if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
+                raise LookupError, "post {0} {1}".format(response.status_code, response.text)
         data = response.json()
         return Payment(
             method="BankAccount",
@@ -193,7 +199,7 @@ class Payment(Base):
             }
         )
         if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
+                raise LookupError, "post {0} {1}".format(response.status_code, response.text)
         data = response.json()
         return Payment(
             method="CreditCard",
@@ -215,7 +221,26 @@ class Payment(Base):
         self.status = response.json()['status']
         return self.status
 
+# can use QBOAccountingModel as base class if ever need to save
+class Customer(object):
+    def __init__(self, id=None, email=None):
+        self.id = id
+        self.email = email
+
+    @classmethod
+    def customers_from_qbo(cls, company_id, qbo_client):
+        response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+        if response.status_code != 200:
+            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+        return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address']) for c in response.json()['QueryResponse']['Customer']]
+
+
+
+# switch from customer_id to Customer object
+
 # make deposit show/link/note echeck payment XXX HERE !!!
 
+# do work to get list of services, accounts, etc. that will be necessary for automation
+#  may not need to save many - all of these...
 
 # use API to get all services - or things they sell - and use that to let them select which thing to sell for full day, half day, etc
