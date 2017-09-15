@@ -2,6 +2,7 @@ from app import app, db
 import os
 import uuid
 from app.authorize_qbo_blueprint.models import QBO
+from decimal import Decimal
 
 class QBOPaymentsModel(object):
     def save(self):
@@ -71,12 +72,11 @@ class QBOAccountingModel(object):
         return self.id
 
 class SalesReceipt(QBOAccountingModel):
-    def __init__(self, id=None, company_id=None, customer=None, item_id=None, amount=None, cc_trans_id=None, qbo_client=None):
+    def __init__(self, id=None, company_id=None, customer=None, item=None, cc_trans_id=None, qbo_client=None):
         self.id = id
         self.company_id=company_id
         self.customer=customer
-        self.item_id=item_id
-        self.amount=amount
+        self.item=item
         self.cc_trans_id=cc_trans_id
         self.qbo_client=qbo_client
         self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id)
@@ -84,13 +84,13 @@ class SalesReceipt(QBOAccountingModel):
     def data(self):
         data = {
             "Line": [{
-                "Amount": self.amount,
+                "Amount": self.item.price,
                 "DetailType": "SalesItemLineDetail",
                 "SalesItemLineDetail": {
                     "ItemRef": {
-                        "value": str(self.item_id)
+                        "value": str(self.item.id)
                     },
-                    "UnitPrice": self.amount,
+                    "UnitPrice": self.item.price,
                     "Qty": 1
                 }
             }],
@@ -175,7 +175,7 @@ class Payment(Base):
             "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
             json={
-                "amount": str(amount),
+                "amount": str(Decimal(amount).quantize(Decimal('.01'))), # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
                 "paymentMode": "WEB",
                 "bankAccountOnFile": str(bank_account.id)
             }
@@ -195,7 +195,7 @@ class Payment(Base):
             "{0}/quickbooks/v4/payments/charges".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
             json={
-                "amount": str(amount),
+                "amount": str(Decimal(amount).quantize(Decimal('.01'))), # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python)
                 "currency": "USD",
                 "cardOnFile": str(credit_card.id)
             }
@@ -235,6 +235,23 @@ class Customer(object):
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address']) for c in response.json()['QueryResponse']['Customer']]
+
+# can use QBOAccountingModel as base class if ever need to save
+class Item(object):
+    def __init__(self, id=None, name=None, price=None):
+        self.id = id
+        self.name = name
+        self.price = price
+
+    @classmethod
+    def items_from_qbo(cls, company_id, qbo_client):
+        response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+        if response.status_code != 200:
+            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+        return [Item(id=i['Id'], name=i['Name'], price=i['UnitPrice']) for i in response.json()['QueryResponse']['Item']]
+
+
+
 
 
 # do work to get list of services, accounts, etc. that will be necessary for automation

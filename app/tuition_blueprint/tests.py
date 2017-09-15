@@ -15,6 +15,8 @@ class TestCase(unittest.TestCase):
         self.company_id = AuthenticationTokens.query.first().company_id
         self.qbo_client = QBO(self.company_id).client()
         self.customer = models.Customer.customers_from_qbo(self.company_id, self.qbo_client)[0]
+        self.item = next((i for i in models.Item.items_from_qbo(self.company_id, self.qbo_client) if i.price > 0), None)
+
 
     def test_with_bank_account(self):
         with app.test_request_context():
@@ -28,11 +30,9 @@ class TestCase(unittest.TestCase):
                 )
             bank_account = models.BankAccount(customer=self.customer, name="Name", routing_number="121042882", account_number="11111111111111111", account_type="PERSONAL_CHECKING", phone="6128675309", qbo_client=self.qbo_client)
             bank_account.save()
-            amount = 666.66
-            payment = models.Payment.payment_from_bank_account(bank_account, amount, self.qbo_client)
+            payment = models.Payment.payment_from_bank_account(bank_account, self.item.price, self.qbo_client)
             payment.update_status_from_qbo(self.qbo_client)
-            item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
-            sales_receipt = models.SalesReceipt(company_id=self.company_id, customer=self.customer, item_id=item_id, amount=amount, qbo_client=self.qbo_client)
+            sales_receipt = models.SalesReceipt(company_id=self.company_id, customer=self.customer, item=self.item, qbo_client=self.qbo_client)
             transaction_id = sales_receipt.save()
             sales_receipt.send()
             account_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20where%20AccountSubType%3D%27Checking%27&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Account'][0]['Id']
@@ -72,12 +72,10 @@ class TestCase(unittest.TestCase):
             token = res.json()['value']
             card = models.CreditCard(customer=self.customer, token=token, qbo_client=self.qbo_client)
             card.save()
-            amount = 345.67
-            payment = models.Payment.payment_from_credit_card(card, amount, self.qbo_client)
+            payment = models.Payment.payment_from_credit_card(card, self.item.price, self.qbo_client)
             cc_trans_id = payment.qbo_id
             payment.update_status_from_qbo(self.qbo_client)
-            item_id = self.qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id), headers={'Accept': 'application/json'}).json()['QueryResponse']['Item'][0]['Id']
-            models.SalesReceipt(company_id=self.company_id, customer=self.customer, item_id=item_id, amount=amount, cc_trans_id=cc_trans_id, qbo_client=self.qbo_client).save()
+            models.SalesReceipt(company_id=self.company_id, customer=self.customer, item=self.item, cc_trans_id=cc_trans_id, qbo_client=self.qbo_client).save()
 
     def test_declined_credit_card(self):
         with app.test_request_context():
@@ -113,10 +111,5 @@ class TestCase(unittest.TestCase):
             token = res.json()['value']
             card = models.CreditCard(customer=self.customer, token=token, qbo_client=self.qbo_client)
             card.save()
-            amount = 345.67
-            payment = models.Payment.payment_from_credit_card(card, amount, self.qbo_client)
+            payment = models.Payment.payment_from_credit_card(card, self.item.price, self.qbo_client)
             assert payment.status=="DECLINED"
-
-    def test_customers(self):
-        with app.test_request_context():
-            models.Customer.customers_from_qbo(self.company_id, self.qbo_client)
