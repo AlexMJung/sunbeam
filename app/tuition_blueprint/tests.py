@@ -30,7 +30,7 @@ class TestCase(unittest.TestCase):
                 )
             bank_account = models.BankAccount(customer=self.customer, name="Name", routing_number="121042882", account_number="11111111111111111", account_type="PERSONAL_CHECKING", phone="6128675309", qbo_client=self.qbo_client)
             bank_account.save()
-            payment = models.Payment.payment_from_bank_account(bank_account, self.item.price, self.qbo_client)
+            payment = models.Payment.payment_from_bank_account(self.company_id, bank_account, self.item.price, self.qbo_client)
             payment.update_status_from_qbo(self.qbo_client)
             sales_receipt = models.SalesReceipt(company_id=self.company_id, customer=self.customer, item=self.item, qbo_client=self.qbo_client)
             transaction_id = sales_receipt.save()
@@ -72,7 +72,7 @@ class TestCase(unittest.TestCase):
             token = res.json()['value']
             card = models.CreditCard(customer=self.customer, token=token, qbo_client=self.qbo_client)
             card.save()
-            payment = models.Payment.payment_from_credit_card(card, self.item.price, self.qbo_client)
+            payment = models.Payment.payment_from_credit_card(self.company_id, card, self.item.price, self.qbo_client)
             cc_trans_id = payment.qbo_id
             payment.update_status_from_qbo(self.qbo_client)
             models.SalesReceipt(company_id=self.company_id, customer=self.customer, item=self.item, cc_trans_id=cc_trans_id, qbo_client=self.qbo_client).save()
@@ -111,5 +111,5 @@ class TestCase(unittest.TestCase):
             token = res.json()['value']
             card = models.CreditCard(customer=self.customer, token=token, qbo_client=self.qbo_client)
             card.save()
-            payment = models.Payment.payment_from_credit_card(card, self.item.price, self.qbo_client)
+            payment = models.Payment.payment_from_credit_card(self.company_id, card, self.item.price, self.qbo_client)
             assert payment.status=="DECLINED"
