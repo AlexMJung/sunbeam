@@ -127,11 +127,12 @@ class SalesReceipt(QBOAccountingModel):
             raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
 
 class Deposit(QBOAccountingModel):
-    def __init__(self, id=None, company_id=None, account_id=None, transaction_id=None, qbo_client=None):
+    def __init__(self, id=None, company_id=None, account_id=None, transaction_id=None, payment=None, qbo_client=None):
         self.id = id
         self.company_id = company_id
         self.account_id = account_id
         self.transaction_id = transaction_id
+        self.payment = payment
         self.qbo_client = qbo_client
         self.url = "{0}/v3/company/{1}/deposit".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id)
 
@@ -150,7 +151,8 @@ class Deposit(QBOAccountingModel):
                         }
                     ]
                 }
-            ]
+            ],
+            "PrivateNote": "ECheck {0}".format(self.payment.qbo_id)
         }
 
 class Base(db.Model):
@@ -234,11 +236,6 @@ class Customer(object):
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address']) for c in response.json()['QueryResponse']['Customer']]
 
-
-
-# switch from customer_id to Customer object
-
-# make deposit show/link/note echeck payment XXX HERE !!!
 
 # do work to get list of services, accounts, etc. that will be necessary for automation
 #  may not need to save many - all of these...
