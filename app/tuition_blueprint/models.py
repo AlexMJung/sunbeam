@@ -171,10 +171,8 @@ class RecurringPayment(Base):
     bank_account_id = db.Column(db.String(120))
     credit_card_id = db.Column(db.String(120))
     item_id = db.Column(db.String(120))
-
-    # start date
-    # end date? or number of payments?
-    # frequency
+    amount = db.Column(db.Numeric(precision=8, scale=2))
+    end_date = db.Column(db.DateTime)
 
     def make_payment(self, qbo_client):
         item = Item.item_from_qbo(self.company_id, self.item_id, qbo_client)
@@ -191,7 +189,11 @@ class RecurringPayment(Base):
                 "currency": "USD",
                 "cardOnFile": str(self.credit_card_id)
             }
-        data['amount'] = str(Decimal(item.price).quantize(Decimal('.01'))) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
+
+        if self.amount:
+            data['amount'] = str(Decimal(self.amount).quantize(Decimal('.01'))) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
+        else:
+            data['amount'] = str(Decimal(item.price).quantize(Decimal('.01'))) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
 
         response = qbo_client.post(
             url,
@@ -204,8 +206,6 @@ class RecurringPayment(Base):
         data = response.json()
 
         return Payment(qbo_id=data['id'], status=data['status'], recurring_payment=self)
-
-
 
 class Payment(Base):
     __tablename__ = "{0}_payment".format(tablename_prefix)
