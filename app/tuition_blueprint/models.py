@@ -163,62 +163,62 @@ class Base(db.Model):
 
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
-class Payment(Base):
-    __tablename__ = "{0}_school".format(tablename_prefix)
-    qbo_id = db.Column(db.String(120))
-    method = db.Column(db.String(120))
-    status = db.Column(db.String(120))
-    customer_id = db.Column(db.String(120))
+class RecurringPayment(Base):
+    __tablename__ = "{0}_recurring_payment".format(tablename_prefix)
     company_id = db.Column(db.String(120))
+    customer_id = db.Column(db.String(120))
+    payments = db.relationship('Payment', backref=db.backref('recurring_payment', cascade="all, delete-orphan", single_parent=True))
+    bank_account_id = db.Column(db.String(120))
+    credit_card_id = db.Column(db.String(120))
+    item_id = db.Column(db.String(120))
 
-    @classmethod
-    def payment_from_bank_account(cls, company_id, bank_account, amount, qbo_client):
-        response = qbo_client.post(
-            "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
-            json={
-                "amount": str(Decimal(amount).quantize(Decimal('.01'))), # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
+    # start date
+    # end date? or number of payments?
+    # frequency
+
+    def make_payment(self, qbo_client):
+        item = Item.item_from_qbo(self.company_id, self.item_id, qbo_client)
+
+        if self.bank_account_id:
+            url = "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"])
+            data = {
                 "paymentMode": "WEB",
-                "bankAccountOnFile": str(bank_account.id)
+                "bankAccountOnFile": str(self.bank_account_id)
             }
-        )
-        if response.status_code != 201:
-                raise LookupError, "post {0} {1}".format(response.status_code, response.text)
-        data = response.json()
-        return Payment(
-            method="BankAccount",
-            qbo_id=data['id'],
-            status=data['status'],
-            customer_id=bank_account.customer.id,
-            company_id=company_id
+        elif self.credit_card_id:
+            url = "{0}/quickbooks/v4/payments/charges".format(app.config["QBO_PAYMENTS_API_BASE_URL"])
+            data = {
+                "currency": "USD",
+                "cardOnFile": str(self.credit_card_id)
+            }
+        data['amount'] = str(Decimal(item.price).quantize(Decimal('.01'))) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
+
+        response = qbo_client.post(
+            url,
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+            json=data
         )
 
-    @classmethod
-    def payment_from_credit_card(cls, company_id, credit_card, amount, qbo_client):
-        response = qbo_client.post(
-            "{0}/quickbooks/v4/payments/charges".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
-            json={
-                "amount": str(Decimal(amount).quantize(Decimal('.01'))), # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python)
-                "currency": "USD",
-                "cardOnFile": str(credit_card.id)
-            }
-        )
         if response.status_code != 201:
                 raise LookupError, "post {0} {1}".format(response.status_code, response.text)
         data = response.json()
-        return Payment(
-            method="CreditCard",
-            qbo_id=data['id'],
-            status=data['status'],
-            customer_id=credit_card.customer.id,
-            company_id=company_id
-        )
+
+        return Payment(qbo_id=data['id'], status=data['status'], recurring_payment=self)
+
+
+
+class Payment(Base):
+    __tablename__ = "{0}_payment".format(tablename_prefix)
+    qbo_id = db.Column(db.String(120))
+    status = db.Column(db.String(120))
+    recurring_payment_id = db.Column(db.Integer, db.ForeignKey("{0}_recurring_payment.id".format(tablename_prefix)))
+    db.relationship('RecurringPayment', backref='payment')
 
     def update_status_from_qbo(self, qbo_client):
-        if self.method == "CreditCard":
+        url = None
+        if self.recurring_payment.credit_card_id:
             url = "{0}/quickbooks/v4/payments/charges/{1}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.qbo_id)
-        elif self.method == "BankAccount":
+        elif self.recurring_payment.bank_account_id:
             url = "{0}/quickbooks/v4/payments/echecks/{1}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.qbo_id)
         response = qbo_client.get(
             url,
@@ -228,6 +228,7 @@ class Payment(Base):
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
         self.status = response.json()['status']
         return self.status
+
 
 # can use QBOAccountingModel as base class if ever need to save
 class Customer(object):
@@ -256,6 +257,15 @@ class Item(object):
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         return [Item(id=i['Id'], name=i['Name'], price=i['UnitPrice']) for i in response.json()['QueryResponse']['Item']]
+
+    @classmethod
+    def item_from_qbo(cls, company_id, item_id, qbo_client):
+        response = qbo_client.get("{0}/v3/company/{1}/item/{2}".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id, item_id), headers={'Accept': 'application/json'})
+        if response.status_code != 200:
+            raise LookupError, "get {0} {1}".format(response.status_code, response.text)
+        qbo_item=response.json()['Item']
+        return Item(id=qbo_item['Id'], name=qbo_item['Name'], price=qbo_item['UnitPrice'])
+
 
 # can use QBOAccountingModel as base class if ever need to save
 class Account(object):
