@@ -72,14 +72,13 @@ class QBOAccountingModel(object):
         return self.id
 
 class SalesReceipt(QBOAccountingModel):
-    def __init__(self, id=None, company_id=None, customer=None, item=None, cc_trans_id=None, qbo_client=None):
-        self.id = id
-        self.company_id=company_id
-        self.customer=customer
-        self.item=item
-        self.cc_trans_id=cc_trans_id
+    def __init__(self, id=None, payment=None, qbo_client=None):
+        self.id=id
+        self.payment=payment
         self.qbo_client=qbo_client
-        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id)
+        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
+        self.item = Item.item_from_qbo(self.payment.recurring_payment.company_id, self.payment.recurring_payment.item_id, qbo_client)
+        self.customer = Customer.customer_from_qbo(self.payment.recurring_payment.company_id, self.payment.recurring_payment.customer_id, self.qbo_client)
 
     def data(self):
         data = {
@@ -90,12 +89,12 @@ class SalesReceipt(QBOAccountingModel):
                     "ItemRef": {
                         "value": str(self.item.id)
                     },
-                    "UnitPrice": self.item.price,
+                    "UnitPrice": (self.payment.recurring_payment.amount if self.payment.recurring_payment.amount else self.item.price),
                     "Qty": 1
                 }
             }],
             "CustomerRef": {
-                "value": str(self.customer.id)
+                "value": str(self.payment.recurring_payment.customer_id)
             },
             "TxnSource": "IntuitPayment"
         }
@@ -106,13 +105,13 @@ class SalesReceipt(QBOAccountingModel):
             }
 
         # this is, according to the docs, sufficient to automatically create and reconcile the deposit
-        if self.cc_trans_id:
+        if self.payment.recurring_payment.credit_card_id:
             data['CreditCardPayment'] = {
                 "CreditChargeInfo": {
                     "ProcessPayment": "true"
                 },
                 "CreditChargeResponse": {
-                    "CCTransId": self.cc_trans_id
+                    "CCTransId": self.payment.qbo_id
                 }
             }
 
@@ -120,7 +119,7 @@ class SalesReceipt(QBOAccountingModel):
 
     def send(self):
         response = self.qbo_client.post(
-            "{0}/v3/company/{1}/salesreceipt/{2}/send".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.company_id, self.id),
+            "{0}/v3/company/{1}/salesreceipt/{2}/send".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id, self.id),
             headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
         )
         if response.status_code != 200:
@@ -243,6 +242,14 @@ class Customer(object):
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName']) for c in response.json()['QueryResponse']['Customer']]
+
+    @classmethod
+    def customer_from_qbo(cls, company_id, customer_id, qbo_client):
+        response = qbo_client.get("{0}/v3/company/{1}/customer/{2}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id, customer_id), headers={'Accept': 'application/json'})
+        if response.status_code != 200:
+            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+        data = response.json()["Customer"]
+        return Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'])
 
 # can use QBOAccountingModel as base class if ever need to save
 class Item(object):

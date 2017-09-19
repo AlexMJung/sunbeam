@@ -76,7 +76,7 @@ class TestCase(unittest.TestCase):
 
             payment.update_status_from_qbo(self.qbo_client)
 
-            sales_receipt = models.SalesReceipt(company_id=self.company_id, customer=self.customer, item=self.item, qbo_client=self.qbo_client)
+            sales_receipt = models.SalesReceipt(payment=payment, qbo_client=self.qbo_client)
             transaction_id = sales_receipt.save()
             sales_receipt.send()
 
