@@ -105,3 +105,8 @@ class TestCase(unittest.TestCase):
 
             db.session.delete(recurring_payment)
             db.session.commit()
+
+    def test_cron(self):
+        # create tests for process_ and update_
+        # confirm that email sent for declined
+        assert False

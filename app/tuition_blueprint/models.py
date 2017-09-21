@@ -1,8 +1,12 @@
 from app import app, db
 import os
 import uuid
-from app.authorize_qbo_blueprint.models import QBO
+from app.authorize_qbo_blueprint.models import QBO, AuthenticationTokens
 from decimal import Decimal
+from datetime import datetime
+from flask_mail import Mail, Message, render_template
+import traceback
+import time
 
 class QBOPaymentsModel(object):
     def save(self):
@@ -70,6 +74,7 @@ class QBOAccountingModel(object):
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
         self.id = response.json()[self.__class__.__name__]["Id"]
         return self.id
+
 
 class SalesReceipt(QBOAccountingModel):
     def __init__(self, id=None, payment=None, qbo_client=None):
@@ -171,6 +176,7 @@ class RecurringPayment(Base):
     credit_card_id = db.Column(db.String(120))
     item_id = db.Column(db.String(120))
     amount = db.Column(db.Numeric(precision=8, scale=2))
+    start_date = db.Column(db.DateTime)
     end_date = db.Column(db.DateTime)
 
     def make_payment(self, qbo_client):
@@ -226,8 +232,21 @@ class Payment(Base):
         if response.status_code != 200:
                 raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
         self.status = response.json()['status']
+
         return self.status
 
+class Company(object):
+    def __init__(self, email=None):
+        self.id = id
+        self.email = email
+
+    @classmethod
+    def company_from_qbo(cls, company_id, qbo_client):
+        response = qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+        if response.status_code != 200:
+            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+        data = response.json()["CompanyInfo"]
+        return Customer(email=data.get('Email', {"Address": None})['Address'])
 
 # can use QBOAccountingModel as base class if ever need to save
 class Customer(object):
@@ -287,6 +306,67 @@ class Account(object):
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         return Account(id=response.json()['QueryResponse']['Account'][0]['Id'])
 
+class MailWithLogging(Mail):
+    def send(self, message):
+        app.logger.critical(message)
+        super(Mail, self).send(message)
+mail = MailWithLogging(app)
+# mail = Mail(app)
+
+def cron():
+    update_payments()
+    make_payments()
+
+def update_payments():
+    # only update pending echecks;
+    # if goes from PENDING to SUCCEEDED then send sales receipt and make deposits
+    # else send invoice
+
+def make_payments()
+    now = datetime.now()
+    for authentication_token in AuthenticationTokens.query.all():
+        app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
+        qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
+        qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
+        company = Company.company_from_qbo(authentication_token.company_id)
+        for recurring_payment in RecurringPayment.query.filter_by(company_id=authentication_token.company_id).all():
+            if (recurring_payment.start_date < now and now < end_date)::
+                # look for successful or pending payment this month, skip if found
+                if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month() and (p.status == "PENDING" or p.status=="CAPTURED" or p.status=="SUCCEEDED")), None):
+                    app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
+                    try:
+                        payment = recurring_payment.make_payment(qbo_payments_client)
+                        if payment.status == "CAPTURED":
+                            sales_receipt = models.SalesReceipt(payment=payment, qbo_client=qbo_accounting_client)
+                            sales_receipt.save()
+                            sales_receipt.send()
+                        elif payment.status == "DECLINED":
+
+                            XXX SEND INVOICE (PAYABLE ONLINE)
+
+                            customer = customer_from_qbo(payment.recurring_payment.company_id, payment.recurring_payment.customer_id, qbo_accounting_client)
+                            recipients = [company.email]
+                            if customer.email:
+                                recipients.append(customer.email)
+                            message = {
+                                "subject": "Tuition payment for {0} declined".format(customer.name),
+                                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                "recipients": recipients,
+                                "bcc": ['dan.grigsby@wildflowerschools.org'],
+                                "html": render_template("declined_email.html", customer=customer)
+                            }
+                            mail.send(Message(**message))
+                        db.session.add(payment)
+                        db.session.commit()
+                    except Exception:
+                        mail.send(
+                            Message(
+                                "Tuition Utility cron - Error",
+                                sender="Wildflower Schools <noreply@wildflowerschools.org>",
+                                recipients=['dan.grigsby@wildflowerschools.org'],
+                                body=traceback.format_exc()
+                            )
+                        )
 
 
-# update payment statuses, when echeck goes from X to Y make deposit
+# !!! IF PAYMENT FAILS, SEND INVOICE!!!

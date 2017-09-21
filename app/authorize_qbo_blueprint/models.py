@@ -18,9 +18,27 @@ class AuthenticationTokens(Base):
     access_token = db.Column(db.String(1024))
     refresh_token = db.Column(db.String(120))
 
+
+class OAuth2SessionWithRateLimit(OAuth2Session):
+    def __init__(self, *args, **kwargs):
+        self.last_api_call = None
+        self.rate_limit = kwargs['rate_limit']
+        del kwargs['rate_limit']
+        super(OAuth2SessionWithRateLimit, self).__init__(*args, **kwargs)
+
+    def request(self, method, url, **kwargs):
+        if self.rate_limit:
+            if self.last_api_call:
+                s = (datetime.now() - self.last_api_call).total_seconds()
+                if s < 60 / self.rate_limit:
+                    time.sleep(60 / self.rate_limit - s)
+            self.last_api_call = datetime.now()
+        return super().request(method, url, **kwargs)
+
 class QBO():
     def __init__(self, company_id):
         self.company_id = company_id;
+        self.rate_limit = rate_limit;
 
     def save_tokens(self, tokens):
         authorization_tokens = AuthenticationTokens.query.filter_by(company_id=self.company_id).first()
@@ -31,10 +49,10 @@ class QBO():
         db.session.add(authorization_tokens)
         db.session.commit()
 
-    def client(self):
+    def client(self, rate_limit=None):
         authorization_tokens = AuthenticationTokens.query.filter_by(company_id=self.company_id).first()
         if authorization_tokens:
-            client = OAuth2Session(
+            client = OAuth2SessionWithRateLimit(
                 app.config['QBO_CLIENT_ID'],
                 token = {
                     'access_token': authorization_tokens.access_token,
@@ -47,7 +65,8 @@ class QBO():
                     'client_id': app.config['QBO_CLIENT_ID'],
                     'client_secret': app.config['QBO_CLIENT_SECRET']
                 },
-                token_updater = self.save_tokens
+                token_updater = self.save_tokens,
+                rate_limit = rate_limit
             )
             return client
         return None
