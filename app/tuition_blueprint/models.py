@@ -75,15 +75,14 @@ class QBOAccountingModel(object):
         self.id = response.json()[self.__class__.__name__]["Id"]
         return self.id
 
-
-class SalesReceipt(QBOAccountingModel):
-    def __init__(self, id=None, payment=None, qbo_client=None):
-        self.id=id
-        self.payment=payment
-        self.qbo_client=qbo_client
-        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
-        self.item = Item.item_from_qbo(self.payment.recurring_payment.company_id, self.payment.recurring_payment.item_id, qbo_client)
-        self.customer = Customer.customer_from_qbo(self.payment.recurring_payment.company_id, self.payment.recurring_payment.customer_id, self.qbo_client)
+class InvoiceOrSalesReceipt(QBOAccountingModel):
+    def __init__(self, id=None, recurring_payment=None, qbo_client):
+        self.id = id
+        self.recurring_payment = recurring_payment
+        self.qbo_client = qbo_client
+        self.url = None
+        self.item = Item.item_from_qbo(self.recurring_payment.company_id, self.payment.item_id, qbo_client)
+        self.customer = Customer.customer_from_qbo(self.recurring_payment.company_id, self.recurring_payment.customer_id, self.qbo_client)
 
     def data(self):
         data = {
@@ -94,22 +93,42 @@ class SalesReceipt(QBOAccountingModel):
                     "ItemRef": {
                         "value": str(self.item.id)
                     },
-                    "UnitPrice": (self.payment.recurring_payment.amount if self.payment.recurring_payment.amount else self.item.price),
+                    "UnitPrice": (self.recurring_payment.amount if self.recurring_payment.amount else item.price),
                     "Qty": 1
                 }
             }],
             "CustomerRef": {
-                "value": str(self.payment.recurring_payment.customer_id)
-            },
-            "TxnSource": "IntuitPayment"
+                "value": str(self.recurring_payment.customer_id)
+            }
         }
-
-        if self.customer.email:
+        if customer.email:
             data["BillEmail"] = {
                 "Address": self.customer.email
             }
+        return data
 
-        # this is, according to the docs, sufficient to automatically create and reconcile the deposit
+    def send(self):
+        response = self.qbo_client.post(
+            self.url + "/{0}/send".format(self.id),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
+        )
+        if response.status_code != 200:
+            raise LookupError, "send {0} {1} {2}".format(response.status_code, response.text, self)
+
+class Invoice(InvoiceOrSalesReceipt):
+    def __init__(self, id=None, payment=None, qbo_client=None):
+        super(SalesReceipt, self).__init__(*args, **kwargs)
+        self.url = "{0}/v3/company/{1}/invoice".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
+
+class SalesReceipt(InvoiceOrSalesReceipt):
+    def __init__(self, id=None, payment=None, qbo_client=None):
+        super(SalesReceipt, self).__init__(*args, **kwargs)
+        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
+
+    def data(self):
+        data = super(SalesReceipt, self).data()
+        data["TxnSource"] = "IntuitPayment"
+        # this <below/next>, according to the docs, sufficient to automatically create and reconcile the deposit
         if self.payment.recurring_payment.credit_card_id:
             data['CreditCardPayment'] = {
                 "CreditChargeInfo": {
@@ -119,16 +138,7 @@ class SalesReceipt(QBOAccountingModel):
                     "CCTransId": self.payment.qbo_id
                 }
             }
-
         return data
-
-    def send(self):
-        response = self.qbo_client.post(
-            "{0}/v3/company/{1}/salesreceipt/{2}/send".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id, self.id),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
-        )
-        if response.status_code != 200:
-            raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
 
 class Deposit(QBOAccountingModel):
     def __init__(self, id=None, company_id=None, account=None, transaction_id=None, payment=None, qbo_client=None):
@@ -292,7 +302,6 @@ class Item(object):
         qbo_item=response.json()['Item']
         return Item(id=qbo_item['Id'], name=qbo_item['Name'], price=qbo_item['UnitPrice'])
 
-
 # can use QBOAccountingModel as base class if ever need to save
 class Account(object):
     def __init__(self, id=None):
@@ -331,37 +340,47 @@ def make_payments()
         company = Company.company_from_qbo(authentication_token.company_id)
         for recurring_payment in RecurringPayment.query.filter_by(company_id=authentication_token.company_id).all():
             if (recurring_payment.start_date < now and now < end_date)::
-                # look for successful or pending payment this month, skip if found
-                if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month() and (p.status == "PENDING" or p.status=="CAPTURED" or p.status=="SUCCEEDED")), None):
+                # look for payment this month, skip if found
+                if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month()), None):
                     app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
                     try:
                         payment = recurring_payment.make_payment(qbo_payments_client)
+                        db.session.add(payment)
+                        db.session.commit()
                         if payment.status == "CAPTURED":
-                            sales_receipt = models.SalesReceipt(payment=payment, qbo_client=qbo_accounting_client)
+                            sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
                             sales_receipt.save()
                             sales_receipt.send()
                         elif payment.status == "DECLINED":
-
-                            XXX SEND INVOICE (PAYABLE ONLINE)
-
                             customer = customer_from_qbo(payment.recurring_payment.company_id, payment.recurring_payment.customer_id, qbo_accounting_client)
-                            recipients = [company.email]
+                            invoice = models.Invoice(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
+                            invoice.save()
                             if customer.email:
                                 recipients.append(customer.email)
-                            message = {
-                                "subject": "Tuition payment for {0} declined".format(customer.name),
-                                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
-                                "recipients": recipients,
-                                "bcc": ['dan.grigsby@wildflowerschools.org'],
-                                "html": render_template("declined_email.html", customer=customer)
-                            }
-                            mail.send(Message(**message))
-                        db.session.add(payment)
-                        db.session.commit()
+                                message = {
+                                    "subject": "Tuition payment for {0} declined".format(customer.name),
+                                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                    "recipients": [customer.email]
+                                    "cc": [company.email]
+                                    "bcc": ['dan.grigsby@wildflowerschools.org'],
+                                    "html": render_template("declined_email.html", customer=customer)
+                                }
+                                mail.send(Message(**message))
+                                invoice.send()
+                            else:
+                                mail.send(
+                                    Message(
+                                        "subject": "Tuition payment for {0} declined; no parent email on-file".format(customer.name),
+                                        sender="Wildflower Schools <noreply@wildflowerschools.org>",
+                                        recipients=[company.email],
+                                        bcc=['dan.grigsby@wildflowerschools.org']
+                                        html: render_template("declined_no_email_email.html", customer=customer)
+                                    )
+                                )
                     except Exception:
                         mail.send(
                             Message(
-                                "Tuition Utility cron - Error",
+                                "Tuition Utility make_payments - Error",
                                 sender="Wildflower Schools <noreply@wildflowerschools.org>",
                                 recipients=['dan.grigsby@wildflowerschools.org'],
                                 body=traceback.format_exc()
