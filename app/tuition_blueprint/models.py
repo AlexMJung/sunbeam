@@ -108,20 +108,23 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
         return data
 
     def send(self):
-        response = self.qbo_client.post(
-            self.url + "/{0}/send".format(self.id),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
-        )
-        if response.status_code != 200:
-            raise LookupError, "send {0} {1} {2}".format(response.status_code, response.text, self)
+        if self.customer.email:
+            response = self.qbo_client.post(
+                self.url + "/{0}/send".format(self.id),
+                headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
+            )
+            if response.status_code != 200:
+                raise LookupError, "send {0} {1} {2}".format(response.status_code, response.text, self)
+            return True
+        return False
 
 class Invoice(InvoiceOrSalesReceipt):
-    def __init__(self, id=None, payment=None, qbo_client=None):
+    def __init__(self, id=None, recurring_payment=None, qbo_client=None):
         super(SalesReceipt, self).__init__(*args, **kwargs)
         self.url = "{0}/v3/company/{1}/invoice".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
 
 class SalesReceipt(InvoiceOrSalesReceipt):
-    def __init__(self, id=None, payment=None, qbo_client=None):
+    def __init__(self, id=None, recurring_payment=None, qbo_client=None):
         super(SalesReceipt, self).__init__(*args, **kwargs)
         self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
 
@@ -240,7 +243,7 @@ class Payment(Base):
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
         )
         if response.status_code != 200:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
+                raise LookupError, "get {0} {1} {2}".format(response.status_code, response.text, self)
         self.status = response.json()['status']
 
         return self.status
@@ -319,73 +322,86 @@ class MailWithLogging(Mail):
     def send(self, message):
         app.logger.critical(message)
         super(Mail, self).send(message)
+
 mail = MailWithLogging(app)
 # mail = Mail(app)
 
-def cron():
-    update_payments()
-    make_payments()
+class Cron(object):
+    def __init__(self):
+        self.qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
+        self.qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
 
-def update_payments():
-    # only update pending echecks;
-    # if goes from PENDING to SUCCEEDED then send sales receipt and make deposits
+    def run(self):
+        try:
+            self.update_payments()
+            self.make_payments()
+        except Exception:
+            mail.send(
+                Message(
+                    "Tuition Utility run - Error",
+                    sender="Wildflower Schools <noreply@wildflowerschools.org>",
+                    recipients=['dan.grigsby@wildflowerschools.org'],
+                    body=traceback.format_exc()
+                )
+            )
+
+    def send_invoice(self, recurring_payment, qbo_client):
+        customer = customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, self.qbo_accounting_client)
+        invoice = models.Invoice(recurring_payment=recurring_payment, qbo_client=self.qbo_accounting_client)
+        invoice.save()
+        if customer.email:
+            recipients.append(customer.email)
+            message = {
+                "subject": "Tuition payment for {0} declined".format(customer.name),
+                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                "recipients": [customer.email]
+                "cc": [company.email]
+                "bcc": ['dan.grigsby@wildflowerschools.org'],
+                "html": render_template("failed_email.html", customer=customer)
+            }
+            mail.send(Message(**message))
+            invoice.send()
+        else:
+            mail.send(
+                Message(
+                    "subject": "Tuition payment for {0} failed; no parent email on-file".format(customer.name),
+                    sender="Wildflower Schools <noreply@wildflowerschools.org>",
+                    recipients=[company.email],
+                    bcc=['dan.grigsby@wildflowerschools.org']
+                    html: render_template("failed_no_email_email.html", customer=customer)
+                )
+            )
+
+    def update_payments(self):
+        for payment in Payment.query.filter(state="PENDING").all():
+            payment.update_status_from_qbo(self.qbo_payments_client)
+            if payment.state != "PENDING":
+                db.session.commit()
+                if payment.state == "SUCCEEDED":
+                    sales_receipt = models.SalesReceipt(recurring_payment=self.payment.recurring_payment, qbo_client=self.qbo_accounting_client)
+                    sales_receipt.save()
+                    sales_receipt.send()
+                elif payment.state == "DECLINED"
+                    self.send_invoice(payment.recurring_payment, self.qbo_accounting_client)
+
     # else send invoice
 
-def make_payments()
-    now = datetime.now()
-    for authentication_token in AuthenticationTokens.query.all():
-        app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
-        qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
-        qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
-        company = Company.company_from_qbo(authentication_token.company_id)
-        for recurring_payment in RecurringPayment.query.filter_by(company_id=authentication_token.company_id).all():
-            if (recurring_payment.start_date < now and now < end_date)::
-                # look for payment this month, skip if found
-                if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month()), None):
-                    app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
-                    try:
-                        payment = recurring_payment.make_payment(qbo_payments_client)
+    def make_payments(self):
+        now = datetime.now()
+        for authentication_token in AuthenticationTokens.query.all():
+            app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
+            company = Company.company_from_qbo(authentication_token.company_id)
+            for recurring_payment in RecurringPayment.query.filter_by(company_id=authentication_token.company_id).all():
+                if (recurring_payment.start_date < now and now < end_date)::
+                    # look for payment this month, skip if found
+                    if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month()), None):
+                        app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
+                        payment = recurring_payment.make_payment(self.qbo_payments_client)
                         db.session.add(payment)
                         db.session.commit()
                         if payment.status == "CAPTURED":
-                            sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
+                            sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=self.qbo_accounting_client)
                             sales_receipt.save()
                             sales_receipt.send()
                         elif payment.status == "DECLINED":
-                            customer = customer_from_qbo(payment.recurring_payment.company_id, payment.recurring_payment.customer_id, qbo_accounting_client)
-                            invoice = models.Invoice(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
-                            invoice.save()
-                            if customer.email:
-                                recipients.append(customer.email)
-                                message = {
-                                    "subject": "Tuition payment for {0} declined".format(customer.name),
-                                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
-                                    "recipients": [customer.email]
-                                    "cc": [company.email]
-                                    "bcc": ['dan.grigsby@wildflowerschools.org'],
-                                    "html": render_template("declined_email.html", customer=customer)
-                                }
-                                mail.send(Message(**message))
-                                invoice.send()
-                            else:
-                                mail.send(
-                                    Message(
-                                        "subject": "Tuition payment for {0} declined; no parent email on-file".format(customer.name),
-                                        sender="Wildflower Schools <noreply@wildflowerschools.org>",
-                                        recipients=[company.email],
-                                        bcc=['dan.grigsby@wildflowerschools.org']
-                                        html: render_template("declined_no_email_email.html", customer=customer)
-                                    )
-                                )
-                    except Exception:
-                        mail.send(
-                            Message(
-                                "Tuition Utility make_payments - Error",
-                                sender="Wildflower Schools <noreply@wildflowerschools.org>",
-                                recipients=['dan.grigsby@wildflowerschools.org'],
-                                body=traceback.format_exc()
-                            )
-                        )
-
-
-# !!! IF PAYMENT FAILS, SEND INVOICE!!!
+                            self.send_invoice(payment.recurring_payment, self.qbo_accounting_client)
