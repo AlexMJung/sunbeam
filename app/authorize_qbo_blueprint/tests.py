@@ -14,4 +14,5 @@ class TestCase(unittest.TestCase):
             then = datetime.now()
             qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
             qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
-            assert (datetime.now - then).total_seconds >= 6
+            seconds = (datetime.now() - then).total_seconds()
+            assert seconds >= 6

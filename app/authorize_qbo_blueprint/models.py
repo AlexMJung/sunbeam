@@ -3,6 +3,7 @@ from app import app, db
 import os
 from requests_oauthlib import OAuth2Session
 from datetime import datetime
+import time
 
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
@@ -29,11 +30,18 @@ class OAuth2SessionWithRateLimit(OAuth2Session):
     def request(self, method, url, **kwargs):
         if self.rate_limit:
             if self.last_api_call:
-                s = (datetime.now() - self.last_api_call).total_seconds()
-                if s < 60 / self.rate_limit:
-                    time.sleep(60 / self.rate_limit - s)
+                seconds = (datetime.now() - self.last_api_call).total_seconds()
+                if seconds < 60 / self.rate_limit:
+                    sleep = 60 / self.rate_limit - seconds
+                    app.logger.info("Enforcing rate limit by sleeping {0} seconds".format(sleep))
+                    time.sleep(sleep)
+            # I decided to record the last api call time before the request, instead of after
+            # this is conservative, because the time to make the request is not included
+            # I considered timing if from after the super call returns, but there is some
+            # time spent on processing the result and, consequently, if you make a call
+            # immediately thereafter it /could/ be too quick
             self.last_api_call = datetime.now()
-        return super().request(method, url, **kwargs)
+        return super(OAuth2SessionWithRateLimit, self).request(method, url, **kwargs)
 
 class QBO():
     def __init__(self, company_id):
