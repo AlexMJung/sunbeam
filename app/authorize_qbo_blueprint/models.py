@@ -2,7 +2,7 @@ from flask import session, url_for
 from app import app, db
 import os
 from requests_oauthlib import OAuth2Session
-import datetime
+from datetime import datetime
 
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
@@ -38,7 +38,6 @@ class OAuth2SessionWithRateLimit(OAuth2Session):
 class QBO():
     def __init__(self, company_id):
         self.company_id = company_id;
-        self.rate_limit = rate_limit;
 
     def save_tokens(self, tokens):
         authorization_tokens = AuthenticationTokens.query.filter_by(company_id=self.company_id).first()
@@ -58,7 +57,7 @@ class QBO():
                     'access_token': authorization_tokens.access_token,
                     'refresh_token': authorization_tokens.refresh_token,
                     'token_type': 'Bearer',
-                    'expires_in': 3600 - (datetime.datetime.now() - authorization_tokens.date_modified).total_seconds()
+                    'expires_in': 3600 - (datetime.now() - authorization_tokens.date_modified).total_seconds()
                 },
                 auto_refresh_url = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
                 auto_refresh_kwargs = {

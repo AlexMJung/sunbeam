@@ -4,7 +4,8 @@ import uuid
 from app.authorize_qbo_blueprint.models import QBO, AuthenticationTokens
 from decimal import Decimal
 from datetime import datetime
-from flask_mail import Mail, Message, render_template
+from flask import render_template
+from flask_mail import Mail, Message
 import traceback
 import time
 
@@ -76,7 +77,7 @@ class QBOAccountingModel(object):
         return self.id
 
 class InvoiceOrSalesReceipt(QBOAccountingModel):
-    def __init__(self, id=None, recurring_payment=None, qbo_client):
+    def __init__(self, id=None, recurring_payment=None, qbo_client=None):
         self.id = id
         self.recurring_payment = recurring_payment
         self.qbo_client = qbo_client
@@ -338,7 +339,7 @@ class Cron(object):
         except Exception:
             mail.send(
                 Message(
-                    "Tuition Utility run - Error",
+                    "Tuition Utility Cron.run - Error",
                     sender="Wildflower Schools <noreply@wildflowerschools.org>",
                     recipients=['dan.grigsby@wildflowerschools.org'],
                     body=traceback.format_exc()
@@ -354,8 +355,8 @@ class Cron(object):
             message = {
                 "subject": "Tuition payment for {0} declined".format(customer.name),
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
-                "recipients": [customer.email]
-                "cc": [company.email]
+                "recipients": [customer.email],
+                "cc": [company.email],
                 "bcc": ['dan.grigsby@wildflowerschools.org'],
                 "html": render_template("failed_email.html", customer=customer)
             }
@@ -364,11 +365,11 @@ class Cron(object):
         else:
             mail.send(
                 Message(
-                    "subject": "Tuition payment for {0} failed; no parent email on-file".format(customer.name),
+                    "Tuition payment for {0} failed; no parent email on-file".format(customer.name),
                     sender="Wildflower Schools <noreply@wildflowerschools.org>",
                     recipients=[company.email],
-                    bcc=['dan.grigsby@wildflowerschools.org']
-                    html: render_template("failed_no_email_email.html", customer=customer)
+                    bcc=['dan.grigsby@wildflowerschools.org'],
+                    html=render_template("failed_no_email_email.html", customer=customer)
                 )
             )
 
@@ -381,10 +382,8 @@ class Cron(object):
                     sales_receipt = models.SalesReceipt(recurring_payment=self.payment.recurring_payment, qbo_client=self.qbo_accounting_client)
                     sales_receipt.save()
                     sales_receipt.send()
-                elif payment.state == "DECLINED"
+                elif payment.state == "DECLINED":
                     self.send_invoice(payment.recurring_payment, self.qbo_accounting_client)
-
-    # else send invoice
 
     def make_payments(self):
         now = datetime.now()
@@ -392,7 +391,7 @@ class Cron(object):
             app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
             company = Company.company_from_qbo(authentication_token.company_id)
             for recurring_payment in RecurringPayment.query.filter_by(company_id=authentication_token.company_id).all():
-                if (recurring_payment.start_date < now and now < end_date)::
+                if (recurring_payment.start_date < now and now < end_date):
                     # look for payment this month, skip if found
                     if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month()), None):
                         app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
