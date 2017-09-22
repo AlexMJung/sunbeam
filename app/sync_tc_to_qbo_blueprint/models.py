@@ -105,7 +105,7 @@ def sync_children():
     app.logger.info("Syncing TC children to QBO customers")
     for qbo_company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
         app.logger.info("Syncing QBO company id: {0}".format(qbo_company_id))
-        qbo = QBO(qbo_company_id).client()
+        qbo = QBO(qbo_company_id).client(rate_limit=500)
         qbo_children = Child.children_from_qbo(qbo)
         for tc_child in Child.children_from_tc(School.query.filter_by(qbo_company_id=qbo_company_id).first().tc_school_id):
             qbo_child = next((c for c in qbo_children if c.tc_id == tc_child.tc_id), None)

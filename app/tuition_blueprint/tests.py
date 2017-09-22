@@ -13,7 +13,7 @@ blueprint_name = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 class TestCase(unittest.TestCase):
     def setUp(self):
         self.company_id = AuthenticationTokens.query.first().company_id
-        self.qbo_client = QBO(self.company_id).client()
+        self.qbo_client = QBO(self.company_id).client(rate_limit=500)
         self.customer = models.Customer.customers_from_qbo(self.company_id, self.qbo_client)[0]
         self.item = next((i for i in models.Item.items_from_qbo(self.company_id, self.qbo_client) if i.price > 0), None)
 

@@ -4,7 +4,7 @@ import httplib2
 from app.authorize_qbo_blueprint.models import QBO
 
 def update_chart_of_accounts(qbo_company_id, gsuite_credentials, sheet_id):
-    qbo = QBO(qbo_company_id).client()
+    qbo = QBO(qbo_company_id).client(rate_limit=500)
     skip_list = [u'Unapplied Cash Bill Payment Expenditure', u'Unapplied Cash Payment Revenue', u'Retained Earnings', u'Sales of Product Income', u'Services', u'Uncategorized Asset', u'Uncategorized Expense', u'Uncategorized Income', u'Undeposited Funds', u'Opening Balance Equity']
     # important! delete accounts furthest from the root first, closer later, so that we don't try to delete an account with sub accounts
     accounts = list(
