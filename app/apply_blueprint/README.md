@@ -2,7 +2,6 @@
 
 ## Environment variables:
 
-    export XYZ="TBD"
     export SURVEY_MONKEY_OAUTH_TOKEN="TBD"
     export APPLY_S3_BUCKET="TBD"
     export TRANSPARENT_CLASSROOM_API_TOKEN="TBD"

@@ -22,6 +22,10 @@
       psql -c "create database wf_development"
       psql -c "create database wf_test"
 
+    Environment variables
+      Find all the environment variables noted in the README.mds using
+        grep "[[:space:]]\+export" -ir app -h |sed -e 's/^[ \t]*//'
+
 ## Global environment variables
 
     export TEST_DATABASE_URL="postgresql://wf@localhost:5432/wf_test"
