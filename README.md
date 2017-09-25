@@ -2,8 +2,18 @@
 
 ## Setup
 
+    Clone repo
+      git clone https://github.com/WildflowerSchools/sunbeam/
+
+    Change to directory
+      cd sunbeam
+
     Set up virtual env
       sudo pip install virtualenv
+      virtualenv venv
+
+
+
 
 ## Heroku global environment variables
 
