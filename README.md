@@ -25,8 +25,11 @@
     Environment variables
       Find all the environment variables noted in the README.mds using
         grep "[[:space:]]\+export" -r app -h |sed -e "s/^[ \t]*//"
-
       Set to appropriate values
+
+    Run database migrations
+      ./flask.sh db upgrade
+      ./flask.sh test db upgrade
 
 
 ## Global environment variables
