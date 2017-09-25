@@ -2,15 +2,15 @@
 
 ## Environment variables:
 
-export XYZ="TBD"
-export SURVEY_MONKEY_OAUTH_TOKEN="TBD"
-export APPLY_S3_BUCKET="TBD"
-export TRANSPARENT_CLASSROOM_API_TOKEN="TBD"
-export TRANSPARENT_CLASSROOM_API_TOKEN_SANDBOX="TBD"
+    export XYZ="TBD"
+    export SURVEY_MONKEY_OAUTH_TOKEN="TBD"
+    export APPLY_S3_BUCKET="TBD"
+    export TRANSPARENT_CLASSROOM_API_TOKEN="TBD"
+    export TRANSPARENT_CLASSROOM_API_TOKEN_SANDBOX="TBD"
 
 ## Heroku specific environment variables
 
-heroku config:set NLTK_DATA=/app/nltk_data
+    heroku config:set NLTK_DATA=/app/nltk_data
 
 ## Notes
 
