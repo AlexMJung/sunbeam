@@ -2,7 +2,8 @@
 
 ## Setup
 
-    TBD
+    Set up virtual env
+      sudo pip install virtualenv
 
 ## Heroku global environment variables
 
