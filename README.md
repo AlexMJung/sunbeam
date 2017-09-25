@@ -19,7 +19,8 @@
       pip install -r requirements.txt
 
     Database
-
+      psql -c "create database if not exists wf_development"
+      psql -c "create database if not exists wf_test"
 
 
 ## Global environment variables
@@ -27,11 +28,9 @@
     export MAIL_USERNAME="TBD"
     export MAIL_PASSWORD="TBD"
 
-
 ## Heroku environment variables
 
     heroku config:set APP_CONFIG_MODE=production
-
 
 ## Leaky abstractions / TODO
 
