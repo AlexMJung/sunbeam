@@ -23,9 +23,11 @@
       psql -c "create database wf_test"
 
     Environment variables
-      Find all the environment variables noted in the README.mds using
+      Create Flask secret key
+        FLASK_SECRET_KEY=SOMETHINGSECRET
+      Find all the environment variables noted in the README.mds using...
         grep "[[:space:]]\+export" -r app -h |sed -e "s/^[ \t]*//"
-      Set to appropriate values
+      ...and set to appropriate values
 
     Run database migrations
       ./flask.sh db upgrade
