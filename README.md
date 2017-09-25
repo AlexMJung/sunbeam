@@ -19,8 +19,12 @@
       pip install -r requirements.txt
 
     Database
-      psql -c "create database wf_development"
-      psql -c "create database wf_test"
+      Create databases
+        psql -c "create database wf_development"
+        psql -c "create database wf_test"
+      Add a user
+        psql -c "create role wf"
+
 
     Environment variables
       Create Flask secret key
@@ -32,7 +36,6 @@
     Run database migrations
       ./flask.sh db upgrade
       ./flask.sh test db upgrade
-
 
 ## Global environment variables
 
