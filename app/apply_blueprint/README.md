@@ -14,8 +14,8 @@
 
 ## Notes
 
-When embedding redirect_to_survey_monkey_with_guid links in website, be sure to
-include ?hub=lowercase_hub_name_from_config - e.g., https://wildflower-sunbeam.herokuapp.com/apply/redirect_to_survey_monkey_with_guid?hub=cambridge
+    When embedding redirect_to_survey_monkey_with_guid links in website, be sure to
+    include ?hub=lowercase_hub_name_from_config - e.g., https://wildflower-sunbeam.herokuapp.com/apply/redirect_to_survey_monkey_with_guid?hub=cambridge
 
 
 ### New school setup
