@@ -1,4 +1,4 @@
-# Apply Blueprint / Application Utility
+# Apply Blueprint
 
 ## Environment variables:
 
@@ -35,7 +35,7 @@
         Update event types with appropriate days of week/times of days
 
     Set up DB:
-      Update seeds 
+      Update seeds
 
     Add teachers to Google Account:
       In incognito window (from above):

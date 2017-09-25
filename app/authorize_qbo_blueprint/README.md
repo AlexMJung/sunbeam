@@ -1,0 +1,12 @@
+# Authorize QBO Blueprint
+
+## Environment variables:
+
+    export QBO_CLIENT_ID="TBD"
+    export QBO_CLIENT_SECRET="TBD"
+    export QBO_ACCOUNTING_API_BASE_URL="TBD"
+    export QBO_PAYMENTS_API_BASE_URL="TBD"
+    export QBO_SANDBOX_CLIENT_ID="TBD"
+    export QBO_SANDBOX_CLIENT_SECRET="TBD"
+    export QBO_SANDBOX_ACCOUNTING_API_BASE_URL="TBD"
+    export QBO_SANDBOX_PAYMENTS_API_BASE_URL="TBD"
