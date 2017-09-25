@@ -24,6 +24,8 @@
 
 ## Global environment variables
 
+    export TEST_DATABASE_URL="postgresql://wf@localhost:5432/wf_test"
+    export DEVELOPMENT_DATABASE_URL="postgresql://wf@localhost:5432/wf_development"
     export MAIL_USERNAME="TBD"
     export MAIL_PASSWORD="TBD"
 
