@@ -35,7 +35,7 @@
         Update event types with appropriate days of week/times of days
 
     Set up DB:
-      Update seeds with correct URLs, email addresses
+      Update seeds 
 
     Add teachers to Google Account:
       In incognito window (from above):
