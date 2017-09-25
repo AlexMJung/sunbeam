@@ -18,15 +18,19 @@
     Install python packages
       pip install -r requirements.txt
 
+    Database
 
 
-## Heroku global environment variables
+
+## Global environment variables
+
+    export MAIL_USERNAME="TBD"
+    export MAIL_PASSWORD="TBD"
+
+
+## Heroku environment variables
 
     heroku config:set APP_CONFIG_MODE=production
-    heroku config:set MAIL_USERNAME=TBD
-    heroku config:set MAIL_PASSWORD=TBD
-    heroku config:set AWS_ACCESS_KEY_ID=TBD
-    heroku config:set AWS_SECRET_ACCESS_KEY=TBD
 
 
 ## Leaky abstractions / TODO
