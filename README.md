@@ -24,7 +24,7 @@
 
     Environment variables
       Find all the environment variables noted in the README.mds using
-        `grep "[[:space:]]\+export" -r app -h |sed -e "s/^[ \t]*//"`
+        grep "[[:space:]]\+export" -r app -h |sed -e "s/^[ \t]*//"
 
       Set to appropriate values
 
