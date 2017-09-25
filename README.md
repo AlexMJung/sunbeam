@@ -30,12 +30,19 @@
       Create Flask secret key
         FLASK_SECRET_KEY=SOMETHINGSECRET
       Find all the environment variables noted in the README.mds using...
-        grep "[[:space:]]\+export" -r app -h |sed -e "s/^[ \t]*//"
+        grep "[[:space:]]\+export" -r app/ README.md -h |sed -e "s/^[ \t]*//"
       ...and set to appropriate values
 
     Run database migrations
       ./flask.sh db upgrade
       ./flask.sh test db upgrade
+
+## Run
+
+    ./flask.sh
+
+    ./test.sh
+
 
 ## Global environment variables
 
