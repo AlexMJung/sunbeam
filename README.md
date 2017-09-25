@@ -19,9 +19,8 @@
       pip install -r requirements.txt
 
     Database
-      psql -c "create database if not exists wf_development"
-      psql -c "create database if not exists wf_test"
-
+      psql -c "create database wf_development"
+      psql -c "create database wf_test"
 
 ## Global environment variables
 
