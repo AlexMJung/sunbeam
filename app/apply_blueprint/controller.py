@@ -7,7 +7,8 @@ from flask_mail import Message
 import traceback
 from flask_cors import CORS, cross_origin
 
-blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1], __name__, template_folder='templates', static_folder='static')
+blueprint_name = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
+blueprint = Blueprint(blueprint_name, __name__, template_folder='templates', static_folder='static')
 
 app.jinja_env.add_extension('jinja2.ext.do')
 
@@ -21,7 +22,7 @@ def five_hundred(e):
             body=traceback.format_exc()
         )
     )
-    return render_template('500.html')
+    return render_template('500.html', layout="{0}_layout.html".format(blueprint_name.rsplit('_', 1)[0]))
 
 @blueprint.route('/redirect_to_survey_monkey_with_guid')
 def redirect_to_survey_monkey_with_guid():
