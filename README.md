@@ -1,8 +1,11 @@
+## Heroku global environment variables
 Global Heroku config/env vars:
 
-  heroku config:set APP_CONFIG_MODE=production
-  heroku config:set MAIL_USERNAME=TBD
-  heroku config:set MAIL_PASSWORD=TBD
+heroku config:set APP_CONFIG_MODE=production
+heroku config:set MAIL_USERNAME=TBD
+heroku config:set MAIL_PASSWORD=TBD
+heroku config:set AWS_ACCESS_KEY_ID=TBD
+heroku config:set AWS_SECRET_ACCESS_KEY=TBD
 
 
 TODO:

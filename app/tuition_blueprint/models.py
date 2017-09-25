@@ -8,6 +8,9 @@ from flask import render_template
 from flask_mail import Mail, Message
 import traceback
 import time
+from flask_marshmallow import Marshmallow
+
+ma = Marshmallow(app)
 
 class QBOPaymentsModel(object):
     def save(self):
@@ -82,7 +85,7 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
         self.recurring_payment = recurring_payment
         self.qbo_client = qbo_client
         self.url = None
-        self.item = Item.item_from_qbo(self.recurring_payment.company_id, self.payment.item_id, qbo_client)
+        self.item = Item.item_from_qbo(self.recurring_payment.company_id, self.recurring_payment.item_id, qbo_client)
         self.customer = Customer.customer_from_qbo(self.recurring_payment.company_id, self.recurring_payment.customer_id, self.qbo_client)
 
     def data(self):
@@ -94,7 +97,7 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
                     "ItemRef": {
                         "value": str(self.item.id)
                     },
-                    "UnitPrice": (self.recurring_payment.amount if self.recurring_payment.amount else item.price),
+                    "UnitPrice": self.recurring_payment.amount,
                     "Qty": 1
                 }
             }],
@@ -102,7 +105,7 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
                 "value": str(self.recurring_payment.customer_id)
             }
         }
-        if customer.email:
+        if self.customer.email:
             data["BillEmail"] = {
                 "Address": self.customer.email
             }
@@ -126,14 +129,14 @@ class Invoice(InvoiceOrSalesReceipt):
 
 class SalesReceipt(InvoiceOrSalesReceipt):
     def __init__(self, id=None, recurring_payment=None, qbo_client=None):
-        super(SalesReceipt, self).__init__(*args, **kwargs)
-        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
+        super(SalesReceipt, self).__init__(id=id, recurring_payment=recurring_payment, qbo_client=qbo_client)
+        self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.recurring_payment.company_id)
 
     def data(self):
         data = super(SalesReceipt, self).data()
         data["TxnSource"] = "IntuitPayment"
         # this <below/next>, according to the docs, sufficient to automatically create and reconcile the deposit
-        if self.payment.recurring_payment.credit_card_id:
+        if self.recurring_payment.credit_card_id:
             data['CreditCardPayment'] = {
                 "CreditChargeInfo": {
                     "ProcessPayment": "true"
@@ -249,6 +252,12 @@ class Payment(Base):
 
         return self.status
 
+# this schema has to follow Payment, since Payment is a relationship of RecurringPayment
+class RecurringPaymentSchema(ma.ModelSchema):
+    class Meta:
+        model = RecurringPayment
+recurring_payment_schema = RecurringPaymentSchema(many=True)
+
 class Company(object):
     def __init__(self, email=None):
         self.id = id
@@ -264,7 +273,7 @@ class Company(object):
 
 # can use QBOAccountingModel as base class if ever need to save
 class Customer(object):
-    def __init__(self, id=None, email=None, name=None):
+    def __init__(self, id=None, email=None, name=None, recurring_payment=None):
         self.id = id
         self.email = email
         self.name = name
@@ -283,6 +292,11 @@ class Customer(object):
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         data = response.json()["Customer"]
         return Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'])
+
+class CustomerSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'name')
+customers_schema = CustomerSchema(many=True)
 
 # can use QBOAccountingModel as base class if ever need to save
 class Item(object):
@@ -305,6 +319,11 @@ class Item(object):
             raise LookupError, "get {0} {1}".format(response.status_code, response.text)
         qbo_item=response.json()['Item']
         return Item(id=qbo_item['Id'], name=qbo_item['Name'], price=qbo_item['UnitPrice'])
+
+class ItemSchema(ma.Schema):
+    class Meta:
+        fields = ('id', 'name', 'price')
+items_schema = ItemSchema(many=True)
 
 # can use QBOAccountingModel as base class if ever need to save
 class Account(object):

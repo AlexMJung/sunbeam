@@ -12,7 +12,9 @@ class TestCase(unittest.TestCase):
             company_id = models.AuthenticationTokens.query.first().company_id
             qbo_client = models.QBO(company_id).client(rate_limit=10)
             then = datetime.now()
-            qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
-            qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+            response = qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+            assert response.status_code == 200
+            response = qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+            assert response.status_code == 200
             seconds = (datetime.now() - then).total_seconds()
             assert seconds >= 6
