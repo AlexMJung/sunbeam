@@ -12,6 +12,11 @@
       sudo pip install virtualenv
       virtualenv venv
 
+    Activate virtual env
+      . venv/bin/activate
+
+    Install python packages
+      pip install requirements.txt
 
 
 
