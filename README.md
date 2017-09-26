@@ -29,6 +29,9 @@
     Create Flask secret key
       export FLASK_SECRET_KEY="SOMETHINGSECRET"
 
+    Set up global application variables
+      See "Global environment variables" section below
+
     Run database migrations
       ./flask.sh db upgrade
       ./flask.sh test db upgrade
