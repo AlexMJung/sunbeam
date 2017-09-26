@@ -33,7 +33,7 @@ class OAuth2SessionWithRateLimit(OAuth2Session):
                 seconds = (datetime.now() - self.last_api_call).total_seconds()
                 if seconds < 60 / self.rate_limit:
                     sleep = 60 / self.rate_limit - seconds
-                    app.logger.info("Enforcing rate limit by sleeping {0} seconds".format(sleep))
+                    # app.logger.debug("Enforcing rate limit by sleeping {0} seconds".format(sleep))
                     time.sleep(sleep)
             # I decided to record the last api call time before the request, instead of after
             # this is conservative, because the time to make the request is not included

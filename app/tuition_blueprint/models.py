@@ -91,13 +91,13 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
     def data(self):
         data = {
             "Line": [{
-                "Amount": self.item.price,
+                "Amount": str(self.recurring_payment.amount),
                 "DetailType": "SalesItemLineDetail",
                 "SalesItemLineDetail": {
                     "ItemRef": {
                         "value": str(self.item.id)
                     },
-                    "UnitPrice": self.recurring_payment.amount,
+                    "UnitPrice": str(self.recurring_payment.amount),
                     "Qty": 1
                 }
             }],
