@@ -61,8 +61,6 @@ class TestCase(unittest.TestCase):
         cls.credit_card = models.CreditCard(customer=cls.customer, token=token, qbo_client=cls.qbo_payments_client)
         cls.credit_card.save()
 
-
-
     def test_recurring_payment_bank_account(self):
         with app.test_request_context():
             recurring_payment = models.RecurringPayment(
@@ -111,6 +109,33 @@ class TestCase(unittest.TestCase):
 
             db.session.delete(recurring_payment)
             db.session.commit()
+
+    def test_delete(self):
+        with app.test_request_context():
+            recurring_payment = models.RecurringPayment(
+                company_id = "123",
+                customer_id = "123",
+                bank_account_id = "123",
+                item_id = "123",
+                amount = 123.45
+            )
+            db.session.add(recurring_payment)
+            db.session.commit()
+
+            self.assertEqual(len(recurring_payment.payments), 0)
+
+            payment = models.Payment(qbo_id="123", status="WHATEVER", recurring_payment=recurring_payment)
+
+            db.session.add(payment)
+            db.session.commit()
+
+            assert payment.recurring_payment_id == recurring_payment.id
+            self.assertEqual(len(recurring_payment.payments), 1)
+
+            db.session.delete(recurring_payment)
+            db.session.commit()
+
+            self.assertEqual(models.Payment.query.get(payment.id), None)
 
     def test_cron(self):
         with app.test_request_context():

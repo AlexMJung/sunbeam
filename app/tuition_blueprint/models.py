@@ -188,7 +188,7 @@ class RecurringPayment(Base):
     __tablename__ = "{0}_recurring_payment".format(tablename_prefix)
     company_id = db.Column(db.String(120))
     customer_id = db.Column(db.String(120))
-    payments = db.relationship('Payment', backref=db.backref('recurring_payment', cascade="all, delete-orphan", single_parent=True))
+    payments = db.relationship('Payment', backref='recurring_payment', cascade="all,delete")
     bank_account_id = db.Column(db.String(120))
     credit_card_id = db.Column(db.String(120))
     item_id = db.Column(db.String(120))
@@ -234,7 +234,8 @@ class Payment(Base):
     qbo_id = db.Column(db.String(120))
     status = db.Column(db.String(120))
     recurring_payment_id = db.Column(db.Integer, db.ForeignKey("{0}_recurring_payment.id".format(tablename_prefix)))
-    db.relationship('RecurringPayment', backref='payment')
+
+
 
     def update_status_from_qbo(self, qbo_client):
         url = None
