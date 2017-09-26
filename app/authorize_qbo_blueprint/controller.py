@@ -6,7 +6,7 @@ import models
 
 blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1], __name__, template_folder='templates', static_folder='static')
 
-os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', None) = '1'
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 qbo = OAuth2Session(
     app.config['QBO_CLIENT_ID'],
     scope = ['com.intuit.quickbooks.accounting', 'com.intuit.quickbooks.payment']
