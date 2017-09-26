@@ -7,7 +7,7 @@ import importlib
 app = Flask(__name__)
 
 app.config.from_object('config.default')
-app.config.from_object("config.{0}".format(os.environ['APP_CONFIG_MODE']))
+app.config.from_object("config.{0}".format(os.environ.get('APP_CONFIG_MODE', None)))
 
 import cli # import after app defined
 
@@ -25,7 +25,7 @@ for f in [f for f in os.listdir(os.path.dirname(os.path.realpath(__file__)))]:
         default_config_module = importlib.import_module(default_config_name)
         app.config.from_object(default_config_name)
 
-        mode_config_name = "app.{0}.config.{1}".format(f, os.environ['APP_CONFIG_MODE'])
+        mode_config_name = "app.{0}.config.{1}".format(f, os.environ.get('APP_CONFIG_MODE', None))
         mode_config_module = importlib.import_module(mode_config_name)
         app.config.from_object(mode_config_name)
 

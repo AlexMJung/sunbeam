@@ -12,3 +12,6 @@
 #     """Generate empty blueprint"""
 #     print name
 # cli.add_command(blueprint)
+
+
+# ./flask.sh generate blueprint name

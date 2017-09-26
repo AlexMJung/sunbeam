@@ -26,7 +26,7 @@ def seed_from_csvs():
     seeds = []
     for f in [f for f in os.listdir("{0}/seeds/".format(path))]:
         parts = f.split(".")
-        if parts[1] == os.environ['APP_CONFIG_MODE']:
+        if parts[1] == os.environ.get('APP_CONFIG_MODE', None):
             model_name = parts[0]
             with open("{0}/seeds/{1}".format(path, f), 'rb') as f:
                 click.echo("Seeding {0}".format(model_name))
