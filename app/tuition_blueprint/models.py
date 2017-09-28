@@ -124,8 +124,8 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
 
 class Invoice(InvoiceOrSalesReceipt):
     def __init__(self, id=None, recurring_payment=None, qbo_client=None):
-        super(SalesReceipt, self).__init__(*args, **kwargs)
-        self.url = "{0}/v3/company/{1}/invoice".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
+        super(Invoice, self).__init__(id=id, recurring_payment=recurring_payment, qbo_client=qbo_client)
+        self.url = "{0}/v3/company/{1}/invoice".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.recurring_payment.company_id)
 
 class SalesReceipt(InvoiceOrSalesReceipt):
     def __init__(self, id=None, recurring_payment=None, payment=None, qbo_client=None):
@@ -364,8 +364,8 @@ class Cron(object):
 
     @classmethod
     def send_invoice(cls, recurring_payment, qbo_client):
-        customer = customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
-        invoice = models.Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
+        customer = Customer.customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
+        invoice = Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
         invoice.save()
         if customer.email:
             recipients.append(customer.email)

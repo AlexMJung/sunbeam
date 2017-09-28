@@ -170,11 +170,68 @@ class TestCase(unittest.TestCase):
             db.session.commit()
 
             models.Cron.make_payments()
-            # assert...
 
             for recurring_payment in models.RecurringPayment.query.all():
                 db.session.delete(recurring_payment)
             db.session.commit()
 
-    # test cc failed
+    def test_cron_make_payments_cc_denied(self):
+        with app.test_request_context():
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+            qbo_cards = TestCase.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], TestCase.customer.id), headers={'Accept': 'application/json'}).json()
+            qbo_card = next((c for c in qbo_cards if c['number'] == "xxxxxxxxxxxx4444"), None)
+            if qbo_card:
+                TestCase.qbo_payments_client.delete(
+                    "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], TestCase.customer.id, qbo_card['id']),
+                    headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
+                )
+
+            res = requests.post(
+                "{0}/quickbooks/v4/payments/tokens".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
+                headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+                json={
+                    "card": {
+                        "expYear": "2020",
+                        "expMonth": "02",
+                        "address": {
+                          "region": "CA",
+                          "postalCode": "94086",
+                          "streetAddress": "1130 Kifer Rd",
+                          "country": "US",
+                          "city": "Sunnyvale"
+                        },
+                        "name": "emulate=10401", # decline
+                        "cvc": "123",
+                        "number": "5555555555554444"
+                    }
+                }
+            )
+            token = res.json()['value']
+            credit_card = models.CreditCard(customer=TestCase.customer, token=token, qbo_client=TestCase.qbo_payments_client)
+            credit_card.save()
+
+            recurring_payment = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                credit_card_id = credit_card.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price,
+                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
+                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            )
+            db.session.add(recurring_payment)
+            db.session.commit()
+
+            with mail.record_messages() as outbox:
+                models.Cron.make_payments()
+                assert len(outbox) == 1
+
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+
     # test ach failed in update

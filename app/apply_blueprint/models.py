@@ -306,7 +306,7 @@ class Application(object):
             message = {
                 "subject": "Application for {0} {1}".format(child.first_name, child.last_name),
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
-                "recipients": [s.email for s in schools] + ['dan.grigsby@wildflowerschools.org', 'cam.leonard@wildflowerschools.org'],
+                "recipients": [s.email for s in schools],
                 "html": render_template("email_schools.html", application=self, child=child, survey=SurveyMonkey.Survey(self.response.hub.upper()))
             }
             mail.send(Message(**message))
@@ -337,7 +337,6 @@ class Application(object):
                 "subject": "Next steps for your application to {0}".format(school.name),
                 "sender": school.email,
                 "recipients": ["{0} {1} <{2}>".format(self.parents[0].first_name, self.parents[0].last_name, self.parents[0].email)],
-                "bcc": ['dan.grigsby@wildflowerschools.org', 'cam.leonard@wildflowerschools.org'],
                 "html": render_template_string(template_string, school=school, children=self.children)
             }
             mail.send(Message(**message))
