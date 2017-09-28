@@ -7,6 +7,8 @@ from app.authorize_qbo_blueprint.models import QBO, AuthenticationTokens
 from random import randint
 import uuid
 import requests
+from datetime import datetime
+import dateutil.relativedelta
 
 blueprint_name = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
@@ -113,11 +115,11 @@ class TestCase(unittest.TestCase):
     def test_delete(self):
         with app.test_request_context():
             recurring_payment = models.RecurringPayment(
-                company_id = "123",
-                customer_id = "123",
-                bank_account_id = "123",
-                item_id = "123",
-                amount = 123.45
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                bank_account_id = TestCase.bank_account.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price
             )
             db.session.add(recurring_payment)
             db.session.commit()
@@ -137,6 +139,42 @@ class TestCase(unittest.TestCase):
 
             self.assertEqual(models.Payment.query.get(payment.id), None)
 
-    def test_cron(self):
+    def test_cron_make_payments(self):
         with app.test_request_context():
-            pass
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+            recurring_payment_ach = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                bank_account_id = TestCase.bank_account.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price,
+                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
+                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            )
+            db.session.add(recurring_payment_ach)
+            db.session.commit()
+
+            recurring_payment_cc = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                credit_card_id = TestCase.credit_card.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price,
+                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
+                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            )
+            db.session.add(recurring_payment_cc)
+            db.session.commit()
+
+            models.Cron.make_payments()
+            # assert...
+
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+    # test cc failed
+    # test ach failed in update

@@ -128,8 +128,9 @@ class Invoice(InvoiceOrSalesReceipt):
         self.url = "{0}/v3/company/{1}/invoice".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.payment.recurring_payment.company_id)
 
 class SalesReceipt(InvoiceOrSalesReceipt):
-    def __init__(self, id=None, recurring_payment=None, qbo_client=None):
+    def __init__(self, id=None, recurring_payment=None, payment=None, qbo_client=None):
         super(SalesReceipt, self).__init__(id=id, recurring_payment=recurring_payment, qbo_client=qbo_client)
+        self.payment = payment
         self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.recurring_payment.company_id)
 
     def data(self):
@@ -234,8 +235,6 @@ class Payment(Base):
     qbo_id = db.Column(db.String(120))
     status = db.Column(db.String(120))
     recurring_payment_id = db.Column(db.Integer, db.ForeignKey("{0}_recurring_payment.id".format(tablename_prefix)))
-
-
 
     def update_status_from_qbo(self, qbo_client):
         url = None
@@ -348,14 +347,11 @@ mail = MailWithLogging(app)
 # mail = Mail(app)
 
 class Cron(object):
-    def __init__(self):
-        self.qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
-        self.qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
-
-    def run(self):
+    @classmethod
+    def run(cls):
         try:
-            self.update_payments()
-            self.make_payments()
+            cls.update_payments()
+            cls.make_payments()
         except Exception:
             mail.send(
                 Message(
@@ -366,9 +362,10 @@ class Cron(object):
                 )
             )
 
-    def send_invoice(self, recurring_payment, qbo_client):
-        customer = customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, self.qbo_accounting_client)
-        invoice = models.Invoice(recurring_payment=recurring_payment, qbo_client=self.qbo_accounting_client)
+    @classmethod
+    def send_invoice(cls, recurring_payment, qbo_client):
+        customer = customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
+        invoice = models.Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
         invoice.save()
         if customer.email:
             recipients.append(customer.email)
@@ -393,34 +390,40 @@ class Cron(object):
                 )
             )
 
-    def update_payments(self):
+    @classmethod
+    def update_payments(cls):
         for payment in Payment.query.filter(state="PENDING").all():
-            payment.update_status_from_qbo(self.qbo_payments_client)
+            authentication_token = AuthenticationTokens.query.filter(company_id = payment.recurring_payment.company_id).first
+            qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
+            qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
+            payment.update_status_from_qbo(qbo_payments_client)
             if payment.state != "PENDING":
                 db.session.commit()
                 if payment.state == "SUCCEEDED":
-                    sales_receipt = models.SalesReceipt(recurring_payment=self.payment.recurring_payment, qbo_client=self.qbo_accounting_client)
+                    sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
                     sales_receipt.save()
                     sales_receipt.send()
                 elif payment.state == "DECLINED":
-                    self.send_invoice(payment.recurring_payment, self.qbo_accounting_client)
+                    Cron.send_invoice(payment.recurring_payment, qbo_accounting_client)
 
-    def make_payments(self):
+    @classmethod
+    def make_payments(cls):
         now = datetime.now()
         for authentication_token in AuthenticationTokens.query.all():
+            qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
+            qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
             app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
-            company = Company.company_from_qbo(authentication_token.company_id)
-            for recurring_payment in RecurringPayment.query.filter_by(company_id=authentication_token.company_id).all():
-                if (recurring_payment.start_date < now and now < end_date):
+            for recurring_payment in RecurringPayment.query.filter_by(company_id=str(authentication_token.company_id)).all():
+                if (recurring_payment.start_date < now and now <= recurring_payment.end_date):
                     # look for payment this month, skip if found
                     if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month()), None):
                         app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
-                        payment = recurring_payment.make_payment(self.qbo_payments_client)
+                        payment = recurring_payment.make_payment(qbo_payments_client)
                         db.session.add(payment)
                         db.session.commit()
                         if payment.status == "CAPTURED":
-                            sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=self.qbo_accounting_client)
+                            sales_receipt = SalesReceipt(recurring_payment=payment.recurring_payment, payment=payment, qbo_client=qbo_accounting_client)
                             sales_receipt.save()
                             sales_receipt.send()
                         elif payment.status == "DECLINED":
-                            self.send_invoice(payment.recurring_payment, self.qbo_accounting_client)
+                            Cron.send_invoice(payment.recurring_payment, qbo_accounting_client)
