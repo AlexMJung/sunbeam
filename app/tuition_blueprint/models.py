@@ -397,8 +397,8 @@ class Cron(object):
             qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
             qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
             payment.update_status_from_qbo(qbo_payments_client)
+            db.session.commit()
             if payment.state != "PENDING":
-                db.session.commit()
                 if payment.state == "SUCCEEDED":
                     sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
                     sales_receipt.save()

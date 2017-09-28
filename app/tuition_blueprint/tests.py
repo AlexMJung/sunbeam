@@ -20,20 +20,15 @@ class TestCase(unittest.TestCase):
         cls.qbo_payments_client = QBO(cls.company_id).client(rate_limit=39)
         cls.customer = models.Customer.customers_from_qbo(cls.company_id, cls.qbo_accounting_client)[0]
         cls.item = next((i for i in models.Item.items_from_qbo(cls.company_id, cls.qbo_accounting_client) if i.price > 0), None)
-
-        qbo_bank_accounts = cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json()
-        qbo_bank_account = next((b for b in qbo_bank_accounts if b['accountNumber'] == "xxxxxxxxxxxxx1111"), None)
-        if qbo_bank_account:
+        for qbo_bank_account in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
+            print qbo_bank_account['id']
             cls.qbo_payments_client.delete(
                 "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_bank_account['id']),
                 headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
             )
-        cls.bank_account = models.BankAccount(customer=cls.customer, name="Name", routing_number="121042882", account_number="11111111111111111", account_type="PERSONAL_CHECKING", phone="6128675309", qbo_client=cls.qbo_payments_client)
+        cls.bank_account = models.BankAccount(customer=cls.customer, name="Name", routing_number="322079353", account_number="11000000333456781", account_type="PERSONAL_CHECKING", phone="6124231234", qbo_client=cls.qbo_payments_client)
         cls.bank_account.save()
-
-        qbo_cards = cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json()
-        qbo_card = next((c for c in qbo_cards if c['number'] == "xxxxxxxxxxxx1111"), None)
-        if qbo_card:
+        for qbo_card in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
             cls.qbo_payments_client.delete(
                 "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_card['id']),
                 headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
@@ -233,5 +228,73 @@ class TestCase(unittest.TestCase):
                 db.session.delete(recurring_payment)
             db.session.commit()
 
+    def test_cron_update_payments(self):
+        with app.test_request_context():
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
 
-    # test ach failed in update
+            recurring_payment_ach = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                bank_account_id = TestCase.bank_account.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price,
+                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
+                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            )
+            db.session.add(recurring_payment_ach)
+            db.session.commit()
+
+            models.Cron.update_payments()
+
+    def test_cron_update_payments(self):
+        with app.test_request_context():
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+            recurring_payment_ach = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                bank_account_id = TestCase.bank_account.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price,
+                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
+                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            )
+            db.session.add(recurring_payment_ach)
+            db.session.commit()
+
+            models.Cron.update_payments()
+
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+    def test_cron_update_payments_ach_declined(self):
+        with app.test_request_context():
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
+
+            recurring_payment_ach = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                bank_account_id = TestCase.bank_account.id,
+                item_id = TestCase.item.id,
+                amount = 4.44, # triggers DECLINED
+                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
+                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
+            )
+            db.session.add(recurring_payment_ach)
+            db.session.commit()
+
+            with mail.record_messages() as outbox:
+                models.Cron.update_payments()
+                self.assertEqual(recurring_payment_ach.payments[0].state, "DECLINED")
+                assert len(outbox) == 1
+
+            for recurring_payment in models.RecurringPayment.query.all():
+                db.session.delete(recurring_payment)
+            db.session.commit()
