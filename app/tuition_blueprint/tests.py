@@ -21,7 +21,6 @@ class TestCase(unittest.TestCase):
         cls.customer = models.Customer.customers_from_qbo(cls.company_id, cls.qbo_accounting_client)[0]
         cls.item = next((i for i in models.Item.items_from_qbo(cls.company_id, cls.qbo_accounting_client) if i.price > 0), None)
         for qbo_bank_account in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
-            print qbo_bank_account['id']
             cls.qbo_payments_client.delete(
                 "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_bank_account['id']),
                 headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
@@ -220,7 +219,7 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment)
             db.session.commit()
 
-            with mail.record_messages() as outbox:
+            with models.mail.record_messages() as outbox:
                 models.Cron.make_payments()
                 assert len(outbox) == 1
 
@@ -290,7 +289,7 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment_ach)
             db.session.commit()
 
-            with mail.record_messages() as outbox:
+            with models.mail.record_messages() as outbox:
                 models.Cron.update_payments()
                 self.assertEqual(recurring_payment_ach.payments[0].state, "DECLINED")
                 assert len(outbox) == 1

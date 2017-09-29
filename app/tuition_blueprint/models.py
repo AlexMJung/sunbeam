@@ -343,8 +343,8 @@ class MailWithLogging(Mail):
         app.logger.critical(message)
         super(Mail, self).send(message)
 
-mail = MailWithLogging(app)
-# mail = Mail(app)
+# mail = MailWithLogging(app)
+mail = Mail(app)
 
 class Cron(object):
     @classmethod
@@ -363,12 +363,11 @@ class Cron(object):
             )
 
     @classmethod
-    def send_invoice(cls, recurring_payment, qbo_client):
+    def send_invoice(cls, company, recurring_payment, qbo_client):
         customer = Customer.customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
         invoice = Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
         invoice.save()
         if customer.email:
-            recipients.append(customer.email)
             message = {
                 "subject": "Tuition payment for {0} declined".format(customer.name),
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
@@ -396,6 +395,7 @@ class Cron(object):
             authentication_token = AuthenticationTokens.query.filter(company_id = payment.recurring_payment.company_id).first
             qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
             qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
+            company = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
             payment.update_status_from_qbo(qbo_payments_client)
             db.session.commit()
             if payment.state != "PENDING":
@@ -404,7 +404,7 @@ class Cron(object):
                     sales_receipt.save()
                     sales_receipt.send()
                 elif payment.state == "DECLINED":
-                    Cron.send_invoice(payment.recurring_payment, qbo_accounting_client)
+                    Cron.send_invoice(company, payment.recurring_payment, qbo_accounting_client)
 
     @classmethod
     def make_payments(cls):
@@ -412,6 +412,7 @@ class Cron(object):
         for authentication_token in AuthenticationTokens.query.all():
             qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
             qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
+            company = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
             app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
             for recurring_payment in RecurringPayment.query.filter_by(company_id=str(authentication_token.company_id)).all():
                 if (recurring_payment.start_date < now and now <= recurring_payment.end_date):
@@ -426,4 +427,4 @@ class Cron(object):
                             sales_receipt.save()
                             sales_receipt.send()
                         elif payment.status == "DECLINED":
-                            Cron.send_invoice(payment.recurring_payment, qbo_accounting_client)
+                            Cron.send_invoice(company, payment.recurring_payment, qbo_accounting_client)
