@@ -11,17 +11,17 @@ blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 def index():
     if not session.get('qbo_company_id', None):
         return redirect(url_for("authorize_qbo_blueprint.index", redirect_url=url_for("{0}.index".format(blueprint.name))))
-    return "OK"
+    return redirect(url_for('static', filename='react/index.html'))
 
 @blueprint.route('/customers')
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def customers():
     return models.CustomerSchema(many=True).jsonify(
         models.Customer.customers_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
     )
 
 @blueprint.route('/recurring_payments', methods=['GET', 'POST'])
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def recurring_payments():
     if request.method == 'GET':
         return models.RecurringPaymentSchema(many=True).jsonify(
@@ -30,8 +30,8 @@ def recurring_payments():
     elif request.method == 'POST':
         return "TBD"
 
-@blueprint.route('/recurring_payments/<int:recurring_payment_id>', methods=['DELETE', 'GET'])
-@cross_origin()
+@blueprint.route('/recurring_payments/<int:recurring_payment_id>', methods=['DELETE'])
+@cross_origin(supports_credentials=True)
 def delete_recurring_payment(recurring_payment_id):
     recurring_payment = models.RecurringPayment.query.filter_by(company_id=session['qbo_company_id']).filter_by(id='recurring_payment_id').first()
     db.session.delete(recurring_payment)
@@ -39,7 +39,7 @@ def delete_recurring_payment(recurring_payment_id):
     return ('', 204)
 
 @blueprint.route('/items')
-@cross_origin()
+@cross_origin(supports_credentials=True)
 def items():
     return models.ItemSchema(many=True).jsonify(
         models.Item.items_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
