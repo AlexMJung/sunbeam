@@ -20,14 +20,9 @@ def customers():
         models.Customer.customers_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
     )
 
-@blueprint.route('/recurring_payments', methods=['GET', 'POST'])
+@blueprint.route('/recurring_payments', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def recurring_payments():
-    if request.method == 'GET':
-        return models.RecurringPaymentSchema(many=True).jsonify(
-            models.RecurringPayment.query.filter_by(company_id=session['qbo_company_id']).all()
-        )
-    elif request.method == 'POST':
         return "TBD"
 
 @blueprint.route('/recurring_payments/<int:recurring_payment_id>', methods=['DELETE'])
