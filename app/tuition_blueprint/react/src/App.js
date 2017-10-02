@@ -16,11 +16,13 @@ class Customers extends Component {
   render() {
     return (
       <div className="Customers">
-        {this.state.customers.map(
-          function(customer){
-            return <p>{customer.name}</p>;
-          }
-        )}
+        {
+          this.state.customers.map(
+            function(customer){
+              return <p>{customer.name}</p>;
+            }
+          )
+        }
       </div>
     )
   }

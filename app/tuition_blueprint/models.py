@@ -277,6 +277,7 @@ class Customer(object):
         self.id = id
         self.email = email
         self.name = name
+        self.recurring_payment = recurring_payment
 
     @classmethod
     def customers_from_qbo(cls, company_id, qbo_client):
@@ -295,7 +296,8 @@ class Customer(object):
 
 class CustomerSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'name')
+        fields = ('id', 'name', 'recurring_payment')
+    recurring_payment = ma.Nested(RecurringPaymentSchema)
 customers_schema = CustomerSchema(many=True)
 
 # can use QBOAccountingModel as base class if ever need to save
