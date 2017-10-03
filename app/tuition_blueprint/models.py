@@ -256,6 +256,7 @@ class Payment(Base):
 class RecurringPaymentSchema(ma.ModelSchema):
     class Meta:
         model = RecurringPayment
+
 recurring_payment_schema = RecurringPaymentSchema(many=True)
 
 class Company(object):
@@ -284,7 +285,7 @@ class Customer(object):
         response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
-        return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName']) for c in response.json()['QueryResponse']['Customer']]
+        return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=c['Id']).first()) for c in response.json()['QueryResponse']['Customer']]
 
     @classmethod
     def customer_from_qbo(cls, company_id, customer_id, qbo_client):
@@ -292,7 +293,7 @@ class Customer(object):
         if response.status_code != 200:
             raise LookupError, "query {0} {1}".format(response.status_code, response.text)
         data = response.json()["Customer"]
-        return Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'])
+        return Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=data['Id']).first())
 
 class CustomerSchema(ma.Schema):
     class Meta:
