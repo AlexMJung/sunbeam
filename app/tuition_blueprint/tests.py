@@ -245,25 +245,7 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment_ach)
             db.session.commit()
 
-            models.Cron.update_payments()
-
-    def test_cron_update_payments(self):
-        with app.test_request_context():
-            for recurring_payment in models.RecurringPayment.query.all():
-                db.session.delete(recurring_payment)
-            db.session.commit()
-
-            recurring_payment_ach = models.RecurringPayment(
-                company_id = TestCase.company_id,
-                customer_id = TestCase.customer.id,
-                bank_account_id = TestCase.bank_account.id,
-                item_id = TestCase.item.id,
-                amount = TestCase.item.price,
-                start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
-                end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
-            )
-            db.session.add(recurring_payment_ach)
-            db.session.commit()
+            models.Cron.make_payments()
 
             models.Cron.update_payments()
 
@@ -289,9 +271,11 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment_ach)
             db.session.commit()
 
+            models.Cron.make_payments()
+
             with models.mail.record_messages() as outbox:
                 models.Cron.update_payments()
-                self.assertEqual(recurring_payment_ach.payments[0].state, "DECLINED")
+                self.assertEqual(recurring_payment_ach.payments[0].status, "DECLINED")
                 assert len(outbox) == 1
 
             for recurring_payment in models.RecurringPayment.query.all():

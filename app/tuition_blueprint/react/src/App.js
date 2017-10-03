@@ -4,31 +4,24 @@ import './App.css';
 import AppBar from 'material-ui/AppBar';
 import Toolbar from 'material-ui/Toolbar';
 import Typography from 'material-ui/Typography';
-import { withStyles } from 'material-ui/styles';
 import Table, { TableBody, TableCell, TableHead, TableRow } from 'material-ui/Table';
 import Paper from 'material-ui/Paper';
 import IconButton from 'material-ui/IconButton';
 import Button from 'material-ui/Button';
 import TextField from 'material-ui/TextField';
-import Dialog, {
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-} from 'material-ui/Dialog';
-
-const styles = theme => ({
-  paper: {
-    width: '100%',
-    marginTop: theme.spacing.unit * 3,
-    overflowX: 'auto',
-  },
-});
+import Dialog, { DialogActions, DialogContent, DialogContentText, DialogTitle} from 'material-ui/Dialog';
+import { MenuItem } from 'material-ui/Menu';
+import Select from 'material-ui/Select';
+import Input, { InputLabel } from 'material-ui/Input';
+import { FormControl } from 'material-ui/Form';
 
 class Form extends Component {
   constructor(props) {
     super(props);
-    this.state = { open: false };
+    this.state = {
+      open: false,
+      customers: props.customers
+    };
   };
   handleRequestClose = () => {
     this.setState({ open: false });
@@ -36,27 +29,46 @@ class Form extends Component {
   handleClickOpen = () => {
     this.setState({ open: true });
   };
+  selectItem = () => {
+
+  }
   render() {
-    return (
-      <Dialog open={this.state.open} onRequestClose={this.handleRequestClose}>
-        <DialogTitle>{'Subscribe'}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            To subscribe to this website, please enter your email address here. We will send
-            updates occationally.
-          </DialogContentText>
-          <TextField autoFocus margin="dense" id="name" label="Email Address" type="email" fullWidth />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={this.handleRequestClose} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={this.handleRequestClose} color="primary">
-            Subscribe
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
+    if (this.props.customer && this.props.items) {
+      return (
+        <Dialog open={this.state.open} onRequestClose={this.handleRequestClose}>
+          <DialogTitle>{'Recurring Payment'}</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              { /* instructions here */ }
+            </DialogContentText>
+            <TextField autoFocus margin="dense" disabled={true} id="name" label="Name"value={this.props.customer.name} fullWidth/>
+            <FormControl>
+              <InputLabel autoWidth htmlFor="age-simple">Item</InputLabel>
+              <Select autoWidth onChange={this.selectItem} value={"0"} input={<Input id="item-id" />}>
+                {
+                  this.props.items.map(
+                    (item, index) => {
+                      return (
+                        <MenuItem key={index} value={item.id}>{item.name}</MenuItem>
+                      )
+                    }
+                  )
+                }
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={this.handleRequestClose} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={this.handleRequestClose} color="primary">
+              Subscribe
+            </Button>
+          </DialogActions>
+        </Dialog>
+      );
+    }
+    return (null);
   }
 }
 
@@ -74,7 +86,10 @@ class RecurringPayment extends Component {
 class Customers extends Component {
   constructor(props) {
     super(props);
-    this.state = { customers: [] };
+    this.state = {
+      customers: [],
+      selectedCustomer: null
+     };
     fetch("http://localhost:5000/tuition/customers", {credentials: 'include'})
       .then( (response) => {
         return response.json()
@@ -88,14 +103,15 @@ class Customers extends Component {
         this.setState({items: parsed_json})
       });
   };
-  showForm = () => {
+  showForm = (index) => {
+    this.setState({selectedCustomer: this.state.customers[index]});
     this.form.handleClickOpen();
   };
   render() {
     return (
       <div className="Customers">
-        <Form ref={ref => (this.form = ref)} />
-        <Paper className={styles.paper}>
+        <Form ref={ref => (this.form = ref)} items={this.state.items} customer={this.state.selectedCustomer}/>
+        <Paper>
           <Table>
             <TableHead>
               <TableRow>
@@ -107,7 +123,7 @@ class Customers extends Component {
             <TableBody>
               {
                 this.state.customers.map(
-                  (customer) => {
+                  (customer, index) => {
                     return (
                       <TableRow key={customer.id}>
                         <TableCell >
@@ -117,7 +133,7 @@ class Customers extends Component {
                           <RecurringPayment recurringPayment={customer.recurring_payment} items={this.items}/>
                         </TableCell>
                         <TableCell style={{textAlign: "center"}}>
-                          <IconButton onClick={this.showForm} className="material-icons">{ customer.recurringPayment ? "delete" : "add_circle" }</IconButton>
+                          <IconButton onClick={ () => this.showForm(index) } className="material-icons">{ customer.recurringPayment ? "delete" : "add_circle" }</IconButton>
                         </TableCell>
                       </TableRow>
                     )
@@ -149,4 +165,4 @@ class App extends Component {
   }
 }
 
-export default withStyles(styles)(App);
+export default App;

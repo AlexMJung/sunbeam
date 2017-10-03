@@ -394,19 +394,19 @@ class Cron(object):
 
     @classmethod
     def update_payments(cls):
-        for payment in Payment.query.filter(state="PENDING").all():
-            authentication_token = AuthenticationTokens.query.filter(company_id = payment.recurring_payment.company_id).first
+        for payment in Payment.query.filter_by(status="PENDING").all():
+            authentication_token = AuthenticationTokens.query.filter_by(company_id = payment.recurring_payment.company_id).first()
             qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
             qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
             company = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
             payment.update_status_from_qbo(qbo_payments_client)
             db.session.commit()
-            if payment.state != "PENDING":
-                if payment.state == "SUCCEEDED":
+            if payment.status != "PENDING":
+                if payment.status == "SUCCEEDED":
                     sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
                     sales_receipt.save()
                     sales_receipt.send()
-                elif payment.state == "DECLINED":
+                elif payment.status == "DECLINED":
                     Cron.send_invoice(company, payment.recurring_payment, qbo_accounting_client)
 
     @classmethod
