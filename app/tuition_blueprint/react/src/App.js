@@ -20,17 +20,28 @@ class Form extends Component {
     super(props);
     this.state = {
       open: false,
-      customers: props.customers
+      itemId: -1,
+      amount: -1,
     };
   };
+
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.items && this.state.itemId === -1) {
+      this.setState({ itemId: nextProps.items[0].id });
+      this.setState({ amount: nextProps.items[0].price });
+    }
+  }
+
   handleRequestClose = () => {
     this.setState({ open: false });
   };
   handleClickOpen = () => {
     this.setState({ open: true });
   };
-  selectItem = () => {
-
+  selectItem = () => event => {
+    console.log(event.target)
+    this.setState({ itemId: event.target.value });
+    this.setState({ amount: this.props.items.find((item) => { return (item.id === event.target.value); }).price });
   }
   render() {
     if (this.props.customer && this.props.items) {
@@ -41,10 +52,10 @@ class Form extends Component {
             <DialogContentText>
               { /* instructions here */ }
             </DialogContentText>
-            <TextField autoFocus margin="dense" disabled={true} id="name" label="Name"value={this.props.customer.name} fullWidth/>
-            <FormControl>
-              <InputLabel autoWidth htmlFor="age-simple">Item</InputLabel>
-              <Select autoWidth onChange={this.selectItem} value={"0"} input={<Input id="item-id" />}>
+            <TextField autoFocus margin="dense" disabled={true} id="name" label="Name"value={this.props.customer.name} fullWidth />
+            <FormControl margin="dense">
+              <InputLabel htmlFor="age-simple">Item</InputLabel>
+              <Select onChange={this.selectItem()} value={this.state.itemId} input={<Input id="item-id" />}>
                 {
                   this.props.items.map(
                     (item, index) => {
@@ -56,6 +67,8 @@ class Form extends Component {
                 }
               </Select>
             </FormControl>
+            <TextField autoFocus margin="dense" id="amount" label="Amount" value={this.state.amount} fullWidth />
+
           </DialogContent>
           <DialogActions>
             <Button onClick={this.handleRequestClose} color="primary">
