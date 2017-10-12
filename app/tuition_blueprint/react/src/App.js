@@ -41,25 +41,26 @@ class Form extends Component {
       this.setState({ itemId: nextProps.items[0].id });
       this.setState({ amount: nextProps.items[0].price.toFixed(2) });
     }
-  }
+  };
   handleRequestClose = () => {
     this.setState(this.baseState)
   };
   handleClickOpen = () => {
     this.setState({ open: true });
   };
-  selectItem = event => {
-    this.setState({ itemId: event.target.value });
-    this.setState({ amount: this.props.items.find((item) => { return (item.id === event.target.value); }).price });
+  selectItem = e => {
+    this.setState({ itemId: e.target.value });
+    this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price });
   }
-
   onChange = e => {
     this.setState({[e.target.name]: e.target.value});
+  };
+  onFocus = e => {
+    this.setState({[e.target.name + "Focus"]: true});
   }
-
-// XXX handle blur/focus
-
-// XXX update CC fields to use blur/focus for shrink
+  onBlur = e => {
+    this.setState({[e.target.name + "Focus"]: false});
+  }
 
   render() {
     if (this.props.customer && this.props.items) {
@@ -99,22 +100,22 @@ class Form extends Component {
             { this.state.paymentMethod === "credit-card" &&
               <div>
                 <FormControl margin="dense" fullWidth>
-                  <InputLabel shrink={true} htmlFor="creditCardNumber">Credit Card Number</InputLabel><br/>
-                  <NumberFormat id="creditCardNumber" name="creditCardNumber" customInput={TextField} value={this.state.creditCardNumber} onChange={this.onChange} format="#### #### #### ####" fullWidth />
+                  <InputLabel shrink={ this.state.creditCardNumberFocus === true } htmlFor="creditCardNumber">Credit Card Number</InputLabel><br/>
+                  <NumberFormat id="creditCardNumber" name="creditCardNumber" customInput={TextField} value={this.state.creditCardNumber} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="#### #### #### ####" fullWidth />
                 </FormControl>
                 <FormControl margin="dense" >
-                  <InputLabel shrink={true} htmlFor="creditCardExpirationMonth">Expiration Month</InputLabel><br/>
-                  <NumberFormat id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={TextField} value={this.state.creditCardExpirationMonth} onChange={this.onChange} format="##" />
-                </FormControl>
-                &nbsp;
-                <FormControl margin="dense" >
-                  <InputLabel shrink={true} htmlFor="amount">Expiration Year</InputLabel><br/>
-                  <NumberFormat id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={TextField} value={this.state.creditCardExpirationYear} onChange={this.onChange} format="##" />
+                  <InputLabel shrink={ this.state.creditCardExpirationMonthFocus === true } htmlFor="creditCardExpirationMonth">Expiration Month</InputLabel><br/>
+                  <NumberFormat id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={TextField} value={this.state.creditCardExpirationMonth} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
                 </FormControl>
                 &nbsp;
                 <FormControl margin="dense" >
-                  <InputLabel shrink={true} htmlFor="creditCardSecurityCode">Security Code</InputLabel><br/>
-                  <NumberFormat id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={TextField} value={this.state.creditCardSecurityCode} onChange={this.onChange} format="###" />
+                  <InputLabel shrink={ this.state.creditCardExpirationYearFocus === true } htmlFor="amount">Expiration Year</InputLabel><br/>
+                  <NumberFormat id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={TextField} value={this.state.creditCardExpirationYear} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
+                </FormControl>
+                &nbsp;
+                <FormControl margin="dense" >
+                  <InputLabel shrink={ this.state.creditCardSecurityCodeFocus === true } htmlFor="creditCardSecurityCode">Security Code</InputLabel><br/>
+                  <NumberFormat id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={TextField} value={this.state.creditCardSecurityCode} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="###" />
                 </FormControl>
               </div>
             }
@@ -122,12 +123,12 @@ class Form extends Component {
               <div>
                 <TextField margin="dense" id="checkingName" name="checkingName" label="Name on Checking Account" value={this.state.checkingName} onChange={this.onChange} fullWidth />
                 <FormControl margin="dense" style={ {width: "48%", marginRight: "4%" } }>
-                  <InputLabel shrink={ this.state.checkingAccountNumber !== "" } htmlFor="checkingAccountNumber">Checking Account Number</InputLabel><br/>
-                  <NumberFormat id="checkingAccountNumber" name="checkingAccountNumber" customInput={TextField} value={this.state.checkingAccountNumber} onChange={this.onChange} />
+                  <InputLabel shrink={ this.state.checkingAccountNumberFocus === true } htmlFor="checkingAccountNumber">Checking Account Number</InputLabel><br/>
+                  <NumberFormat id="checkingAccountNumber" name="checkingAccountNumber" customInput={TextField} value={this.state.checkingAccountNumber} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} />
                 </FormControl>
                 <FormControl margin="dense" style={ {width: "48%"} }>
-                  <InputLabel shrink={ this.state.checkingRoutingNumber !== "" } htmlFor="checkingRoutingNumber">Routing Number</InputLabel><br/>
-                  <NumberFormat id="checkingRoutingNumber" name="checkingRoutingNumber" customInput={TextField} value={this.state.checkingRoutingNumber} onChange={this.onChange} format="#########" fullWidth />
+                  <InputLabel shrink={ this.state.checkingRoutingNumberFocus === true } htmlFor="checkingRoutingNumber">Routing Number</InputLabel><br/>
+                  <NumberFormat id="checkingRoutingNumber" name="checkingRoutingNumber" customInput={TextField} value={this.state.checkingRoutingNumber} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="#########" fullWidth />
                 </FormControl>
               </div>
             }
