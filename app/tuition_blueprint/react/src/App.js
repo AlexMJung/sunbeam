@@ -13,36 +13,54 @@ import Dialog, { DialogActions, DialogContent, DialogContentText, DialogTitle} f
 import { MenuItem } from 'material-ui/Menu';
 import Select from 'material-ui/Select';
 import Input, { InputLabel } from 'material-ui/Input';
-import { FormControl } from 'material-ui/Form';
+import { FormControl, FormControlLabel } from 'material-ui/Form';
+import NumberFormat from 'react-number-format';
+import Radio, { RadioGroup } from 'material-ui/Radio';
 
 class Form extends Component {
   constructor(props) {
     super(props);
     this.state = {
       open: false,
-      itemId: -1,
-      amount: -1,
+      itemId: "",
+      amount: "",
+      paymentMethod: "",
+      creditCardNumber: "",
+      creditCardExpirationMonth: "",
+      creditCardExpirationYear: "",
+      creditCardSecurityCode: "",
+      checkingName: "",
+      checkingAccountNumber: "",
+      checkingRoutingNumber: "",
+      checkingPhone: ""
     };
+    this.baseState = this.state
   };
-
   componentWillReceiveProps(nextProps) {
-    if (nextProps.items && this.state.itemId === -1) {
+    if (nextProps.items && this.state.itemId === "") {
       this.setState({ itemId: nextProps.items[0].id });
-      this.setState({ amount: nextProps.items[0].price });
+      this.setState({ amount: nextProps.items[0].price.toFixed(2) });
     }
   }
-
   handleRequestClose = () => {
-    this.setState({ open: false });
+    this.setState(this.baseState)
   };
   handleClickOpen = () => {
     this.setState({ open: true });
   };
-  selectItem = () => event => {
-    console.log(event.target)
+  selectItem = event => {
     this.setState({ itemId: event.target.value });
     this.setState({ amount: this.props.items.find((item) => { return (item.id === event.target.value); }).price });
   }
+
+  onChange = e => {
+    this.setState({[e.target.name]: e.target.value});
+  }
+
+// XXX handle blur/focus
+
+// XXX update CC fields to use blur/focus for shrink
+
   render() {
     if (this.props.customer && this.props.items) {
       return (
@@ -52,10 +70,10 @@ class Form extends Component {
             <DialogContentText>
               { /* instructions here */ }
             </DialogContentText>
-            <TextField autoFocus margin="dense" disabled={true} id="name" label="Name"value={this.props.customer.name} fullWidth />
-            <FormControl margin="dense">
-              <InputLabel htmlFor="age-simple">Item</InputLabel>
-              <Select onChange={this.selectItem()} value={this.state.itemId} input={<Input id="item-id" />}>
+            <TextField margin="dense" disabled={true} id="name" label="Name" value={this.props.customer.name} fullWidth />
+            <FormControl margin="dense" fullWidth>
+              <InputLabel htmlFor="item-id">Item</InputLabel>
+              <Select onChange={this.selectItem} value={this.state.itemId} input={<Input id="item-id" fullWidth />}>
                 {
                   this.props.items.map(
                     (item, index) => {
@@ -67,15 +85,59 @@ class Form extends Component {
                 }
               </Select>
             </FormControl>
-            <TextField autoFocus margin="dense" id="amount" label="Amount" value={this.state.amount} fullWidth />
-
+            <FormControl margin="dense" fullWidth>
+              <InputLabel shrink={true} htmlFor="amount">Amount</InputLabel><br/>
+              <NumberFormat id="amount" decimalPrecision={2} customInput={TextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.onChange} name="amount" fullWidth />
+            </FormControl>
+            <FormControl margin="dense" fullWidth>
+              <InputLabel shrink={true} htmlFor="amount">Payment Method</InputLabel><br/>
+              <RadioGroup name="paymentMethod" value={this.state.paymentMethod} onChange={this.onChange}  style={{ display: 'inline' }}>
+                <FormControlLabel value="credit-card" control={<Radio />} label="Credit card" />
+                <FormControlLabel value="e-check" control={<Radio />} label="E-check" />
+              </RadioGroup>
+            </FormControl>
+            { this.state.paymentMethod === "credit-card" &&
+              <div>
+                <FormControl margin="dense" fullWidth>
+                  <InputLabel shrink={true} htmlFor="creditCardNumber">Credit Card Number</InputLabel><br/>
+                  <NumberFormat id="creditCardNumber" name="creditCardNumber" customInput={TextField} value={this.state.creditCardNumber} onChange={this.onChange} format="#### #### #### ####" fullWidth />
+                </FormControl>
+                <FormControl margin="dense" >
+                  <InputLabel shrink={true} htmlFor="creditCardExpirationMonth">Expiration Month</InputLabel><br/>
+                  <NumberFormat id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={TextField} value={this.state.creditCardExpirationMonth} onChange={this.onChange} format="##" />
+                </FormControl>
+                &nbsp;
+                <FormControl margin="dense" >
+                  <InputLabel shrink={true} htmlFor="amount">Expiration Year</InputLabel><br/>
+                  <NumberFormat id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={TextField} value={this.state.creditCardExpirationYear} onChange={this.onChange} format="##" />
+                </FormControl>
+                &nbsp;
+                <FormControl margin="dense" >
+                  <InputLabel shrink={true} htmlFor="creditCardSecurityCode">Security Code</InputLabel><br/>
+                  <NumberFormat id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={TextField} value={this.state.creditCardSecurityCode} onChange={this.onChange} format="###" />
+                </FormControl>
+              </div>
+            }
+            { this.state.paymentMethod === "e-check" &&
+              <div>
+                <TextField margin="dense" id="checkingName" name="checkingName" label="Name on Checking Account" value={this.state.checkingName} onChange={this.onChange} fullWidth />
+                <FormControl margin="dense" style={ {width: "48%", marginRight: "4%" } }>
+                  <InputLabel shrink={ this.state.checkingAccountNumber !== "" } htmlFor="checkingAccountNumber">Checking Account Number</InputLabel><br/>
+                  <NumberFormat id="checkingAccountNumber" name="checkingAccountNumber" customInput={TextField} value={this.state.checkingAccountNumber} onChange={this.onChange} />
+                </FormControl>
+                <FormControl margin="dense" style={ {width: "48%"} }>
+                  <InputLabel shrink={ this.state.checkingRoutingNumber !== "" } htmlFor="checkingRoutingNumber">Routing Number</InputLabel><br/>
+                  <NumberFormat id="checkingRoutingNumber" name="checkingRoutingNumber" customInput={TextField} value={this.state.checkingRoutingNumber} onChange={this.onChange} format="#########" fullWidth />
+                </FormControl>
+              </div>
+            }
           </DialogContent>
           <DialogActions>
             <Button onClick={this.handleRequestClose} color="primary">
-              Cancel
+              Discard
             </Button>
             <Button onClick={this.handleRequestClose} color="primary">
-              Subscribe
+              Save
             </Button>
           </DialogActions>
         </Dialog>
