@@ -25,6 +25,8 @@ class Form extends Component {
       itemId: "",
       amount: "",
       paymentMethod: "",
+      endDateMonth: "",
+      endDateYear: "",
       creditCardNumber: "",
       creditCardExpirationMonth: "",
       creditCardExpirationYear: "",
@@ -62,7 +64,7 @@ class Form extends Component {
     this.setState({[e.target.name + "Focus"]: false});
   }
   shrink = s => {
-    return this.state[s + "Focus"] == true || this.state[s] !== ""
+    return this.state[s + "Focus"] === true || this.state[s] !== ""
   }
 
   render() {
@@ -72,7 +74,7 @@ class Form extends Component {
           <DialogTitle>{'Recurring Payment'}</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              { /* instructions here */ }
+              All of the fields on this form are required:
             </DialogContentText>
             <TextField margin="dense" disabled={true} id="name" label="Name" value={this.props.customer.name} fullWidth />
             <FormControl margin="dense" fullWidth>
@@ -92,6 +94,14 @@ class Form extends Component {
             <FormControl margin="dense" fullWidth>
               <InputLabel shrink={true} htmlFor="amount">Amount</InputLabel><br/>
               <NumberFormat id="amount" decimalPrecision={2} customInput={TextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.onChange} name="amount" fullWidth />
+            </FormControl>
+            <FormControl margin="dense" style={ {width: "48%", marginRight: "4%" } }>
+              <InputLabel shrink={ this.shrink("endDateMonth") } htmlFor="endDateMonth">Last Payment Month</InputLabel><br/>
+              <NumberFormat id="endDateMonth" name="endDateMonth" customInput={TextField} value={this.state.endDateMonth} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
+            </FormControl>
+            <FormControl margin="dense" style={ {width: "48%" } }>
+              <InputLabel shrink={ this.shrink("endDateYear") } htmlFor="amount">Last Payment Year</InputLabel><br/>
+              <NumberFormat id="endDateYear" name="endDateYear" customInput={TextField} value={this.state.endDateYear} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
             </FormControl>
             <FormControl margin="dense" fullWidth>
               <InputLabel shrink={true} htmlFor="amount">Payment Method</InputLabel><br/>
@@ -145,7 +155,7 @@ class Form extends Component {
             <Button onClick={this.handleRequestClose} color="primary">
               Discard
             </Button>
-            <Button onClick={this.handleRequestClose} color="primary">
+            <Button onClick={this.handleRequestClose} color="primary" disabled>
               Save
             </Button>
           </DialogActions>
