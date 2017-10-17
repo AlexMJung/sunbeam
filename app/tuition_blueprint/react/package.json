@@ -6,9 +6,11 @@
     "material-ui-icons": "1.0.0-beta.14",
     "material-ui@next": "1.0.0-beta.13",
     "react": "16.0.0",
+    "react-autosuggest": "^9.3.2",
     "react-dom": "16.0.0",
     "react-number-format": "2.0.4",
-    "react-scripts": "1.0.14"
+    "react-scripts": "1.0.14",
+    "react-autosuggest": "9.3.2"
   },
   "scripts": {
     "start": "react-scripts start",

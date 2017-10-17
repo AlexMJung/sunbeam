@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import './App.css';
-
 import AppBar from 'material-ui/AppBar';
 import Toolbar from 'material-ui/Toolbar';
 import Typography from 'material-ui/Typography';
@@ -17,14 +16,75 @@ import { FormControl, FormControlLabel } from 'material-ui/Form';
 import NumberFormat from 'react-number-format';
 import Radio, { RadioGroup } from 'material-ui/Radio';
 
+class Validators {
+  static required = value => {
+    if (value) {
+      return true;
+    }
+    return false;
+  }
+
+  static positiveAmount = value => {
+    var n = Number(value.replace(/^\$/, ""));
+    if (n > 0) {
+      return true;
+    }
+    return false;
+  }
+
+  static monthNumber = value => {
+    var n = Number(value);
+    if (12 >= n >= 1) {
+      return true;
+    }
+    return false;
+  }
+
+  static yearNumber = value => {
+    var n = Number(value)
+    if (n >= new Date().getFullYear() - 2000) {
+      return true;
+    }
+    return false;
+  }
+}
+
+class ValidatedTextField extends Component {
+  registerComponentForValidation = ref => {
+    this.validationParent.registerComponentForValidation(ref)
+  };
+  change = e => {
+    this.validationParent.validateComponent(this);
+    this.validationParent.validate();
+    return this.onChange(e);
+  };
+  render() {
+    const { validationParent, onChange, ...props} = this.props;
+    this.validationParent = validationParent;
+    this.onChange = onChange;
+    return (
+      <StatefulTextField onChange={this.change} ref={this.registerComponentForValidation} valid={this.props.validationParent.validateComponent(this).toString()} {...props} />
+    )
+  };
+}
+
+class StatefulTextField extends Component {
+  render() {
+    return (
+      <TextField {...this.props} />
+    )
+  }
+}
+
 class Form extends Component {
   constructor(props) {
     super(props);
+    this.componentsToValidate = [];
     this.state = {
       open: false,
       itemId: "",
       amount: "",
-      paymentMethod: "",
+      paymentMethod: "credit-card",
       endDateMonth: "",
       endDateYear: "",
       creditCardNumber: "",
@@ -34,7 +94,8 @@ class Form extends Component {
       checkingName: "",
       checkingAccountNumber: "",
       checkingRoutingNumber: "",
-      checkingPhone: ""
+      checkingPhone: "",
+      valid: false
     };
     this.baseState = this.state
   };
@@ -44,33 +105,52 @@ class Form extends Component {
       this.setState({ amount: nextProps.items[0].price.toFixed(2) });
     }
   };
-  handleRequestClose = () => {
+  registerComponentForValidation = (component) => {
+    this.componentsToValidate.push(component)
+  }
+  validate = () => {
+    for (var i = 0; i < this.componentsToValidate.length; i++) {
+      if (this.componentsToValidate[i].props.valid === "false") {
+        console.log("First invalid: " + this.componentsToValidate[i].props.id);
+        this.setState({ valid: false });
+        return
+      }
+    }
+    this.setState({ valid: true });
+  };
+  validateComponent = component => {
+    var validators = component.props.validators
+    if (! Array.isArray(validators)) {
+      validators = [validators];
+    }
+    for (var i = 0; i < validators.length; i++) {
+      var validator = validators[i]
+      if (! validator(component.props.value)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  requestClose = () => {
     this.setState(this.baseState)
   };
-  handleClickOpen = () => {
+  open = () => {
     this.setState({ open: true });
   };
-  selectItem = e => {
+  item = e => {
     this.setState({ itemId: e.target.value });
     this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price });
   }
-  onChange = e => {
+  change = e => {
     this.setState({[e.target.name]: e.target.value});
+    this.validate();
   };
-  onFocus = e => {
-    this.setState({[e.target.name + "Focus"]: true});
-  }
-  onBlur = e => {
-    this.setState({[e.target.name + "Focus"]: false});
-  }
-  shrink = s => {
-    return this.state[s + "Focus"] === true || this.state[s] !== ""
-  }
-
+  submit = () => {
+  };
   render() {
     if (this.props.customer && this.props.items) {
       return (
-        <Dialog open={this.state.open} onRequestClose={this.handleRequestClose}>
+        <Dialog open={this.state.open} onRequestClose={this.requestClose}>
           <DialogTitle>{'Recurring Payment'}</DialogTitle>
           <DialogContent>
             <DialogContentText>
@@ -79,7 +159,7 @@ class Form extends Component {
             <TextField margin="dense" disabled={true} id="name" label="Name" value={this.props.customer.name} fullWidth />
             <FormControl margin="dense" fullWidth>
               <InputLabel htmlFor="item-id">Item</InputLabel>
-              <Select onChange={this.selectItem} value={this.state.itemId} input={<Input id="item-id" fullWidth />}>
+              <Select onChange={this.item} value={this.state.itemId} input={<Input id="item-id" fullWidth />}>
                 {
                   this.props.items.map(
                     (item, index) => {
@@ -91,71 +171,38 @@ class Form extends Component {
                 }
               </Select>
             </FormControl>
-            <FormControl margin="dense" fullWidth>
-              <InputLabel shrink={true} htmlFor="amount">Amount</InputLabel><br/>
-              <NumberFormat id="amount" decimalPrecision={2} customInput={TextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.onChange} name="amount" fullWidth />
-            </FormControl>
-            <FormControl margin="dense" style={ {width: "48%", marginRight: "4%" } }>
-              <InputLabel shrink={ this.shrink("endDateMonth") } htmlFor="endDateMonth">Last Payment Month</InputLabel><br/>
-              <NumberFormat id="endDateMonth" name="endDateMonth" customInput={TextField} value={this.state.endDateMonth} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
-            </FormControl>
-            <FormControl margin="dense" style={ {width: "48%" } }>
-              <InputLabel shrink={ this.shrink("endDateYear") } htmlFor="amount">Last Payment Year</InputLabel><br/>
-              <NumberFormat id="endDateYear" name="endDateYear" customInput={TextField} value={this.state.endDateYear} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
-            </FormControl>
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.positiveAmount]} margin="dense" id="amount" decimalPrecision={2} label="Amount" customInput={ValidatedTextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.change} name="amount" fullWidth/>
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={ {width: "48%", marginRight: "4%"} } format="##" />
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={ {width: "48%"} }/>
             <FormControl margin="dense" fullWidth>
               <InputLabel shrink={true} htmlFor="amount">Payment Method</InputLabel><br/>
-              <RadioGroup name="paymentMethod" value={this.state.paymentMethod} onChange={this.onChange}  style={{ display: 'inline' }}>
+              <RadioGroup name="paymentMethod" value={this.state.paymentMethod} onChange={this.change}  style={{ display: 'inline' }}>
                 <FormControlLabel value="credit-card" control={<Radio />} label="Credit card" />
                 <FormControlLabel value="e-check" control={<Radio />} label="E-check" />
               </RadioGroup>
             </FormControl>
             { this.state.paymentMethod === "credit-card" &&
               <div>
-                <FormControl margin="dense" fullWidth>
-                  <InputLabel shrink={ this.shrink("creditCardNumber") } htmlFor="creditCardNumber">Credit Card Number</InputLabel><br/>
-                  <NumberFormat id="creditCardNumber" name="creditCardNumber" customInput={TextField} value={this.state.creditCardNumber} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="#### #### #### ####" fullWidth />
-                </FormControl>
-                <FormControl margin="dense" style={ {width: "32%", marginRight: "2%" } }>
-                  <InputLabel shrink={ this.shrink("creditCardExpirationMonth") } htmlFor="creditCardExpirationMonth">Expiration Month</InputLabel><br/>
-                  <NumberFormat id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={TextField} value={this.state.creditCardExpirationMonth} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
-                </FormControl>
-                <FormControl margin="dense" style={ {width: "32%", marginRight: "2%" } }>
-                  <InputLabel shrink={ this.shrink("creditCardExpirationYear") } htmlFor="amount">Expiration Year</InputLabel><br/>
-                  <NumberFormat id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={TextField} value={this.state.creditCardExpirationYear} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="##" />
-                </FormControl>
-                <FormControl margin="dense" style={ {width: "32%" } }>
-                  <InputLabel shrink={ this.shrink("creditCardSecurityCode") } htmlFor="creditCardSecurityCode">Security Code</InputLabel><br/>
-                  <NumberFormat id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={TextField} value={this.state.creditCardSecurityCode} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="###" />
-                </FormControl>
+                <NumberFormat validationParent={this} validators={[Validators.required]} margin="dense" fullWidth label="Credit Card Number" id="creditCardNumber" name="creditCardNumber" customInput={ValidatedTextField} value={this.state.creditCardNumber} onChange={this.change} format="#### #### #### ####" />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={ {width: "32%", marginRight: "2%" } }/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={ {width: "32%", marginRight: "2%" } }/>
+                <NumberFormat validationParent={this} validators={[Validators.required]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={ {width: "32%" } }/>
               </div>
             }
             { this.state.paymentMethod === "e-check" &&
               <div>
-                <FormControl margin="dense" style={ {width: "48%", marginRight: "4%" } }>
-                  <InputLabel shrink={ this.shrink("checkingName") } htmlFor="checkingAccountNumber">Name on Checking Account</InputLabel><br/>
-                  <NumberFormat id="checkingName" name="checkingName" customInput={TextField} value={this.state.checkingName} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="### ### ####"/>
-                </FormControl>
-                <FormControl margin="dense" style={ {width: "48%" } }>
-                  <InputLabel shrink={ this.shrink("checkingPhone") } htmlFor="checkingAccountNumber">Phone Number</InputLabel><br/>
-                  <NumberFormat id="checkingPhone" name="checkingPhone" customInput={TextField} value={this.state.checkingPhone} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="### ### ####"/>
-                </FormControl>
-                <FormControl margin="dense" style={ {width: "48%", marginRight: "4%" } }>
-                  <InputLabel shrink={ this.shrink("checkingRoutingNumber") } htmlFor="checkingRoutingNumber">Routing Number</InputLabel><br/>
-                  <NumberFormat id="checkingRoutingNumber" name="checkingRoutingNumber" customInput={TextField} value={this.state.checkingRoutingNumber} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} format="#########" fullWidth />
-                </FormControl>
-                <FormControl margin="dense" style={ {width: "48%"} }>
-                  <InputLabel shrink={ this.shrink("checkingAccountNumber") } htmlFor="checkingAccountNumber">Checking Account Number</InputLabel><br/>
-                  <NumberFormat id="checkingAccountNumber" name="checkingAccountNumber" customInput={TextField} value={this.state.checkingAccountNumber} onChange={this.onChange} onFocus={this.onFocus} onBlur={this.onBlur} />
-                </FormControl>
+                <ValidatedTextField validationParent={this} validators={[Validators.required]} id="checkingName" name="checkingName" label="Name on Checking Account"  value={this.state.checkingName} onChange={this.change} style={ {width: "48%", marginRight: "4%" } } />
+                <NumberFormat validationParent={this} validators={[Validators.required]} id="checkingPhone" name="checkingPhone" label="Phone Number" customInput={ValidatedTextField} value={this.state.checkingPhone} onChange={this.change} format="### ### ####" style={ {width: "48%" } } />
+                <NumberFormat validationParent={this} validators={[Validators.required]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={ {width: "48%", marginRight: "4%" } }/>
+                <NumberFormat validationParent={this} validators={[Validators.required]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={ {width: "48%"} }/>
               </div>
             }
           </DialogContent>
           <DialogActions>
-            <Button onClick={this.handleRequestClose} color="primary">
-              Discard
+            <Button onClick={this.requestClose} color="primary">
+              Cancel
             </Button>
-            <Button onClick={this.handleRequestClose} color="primary" disabled>
+            <Button disabled={!this.state.valid} onClick={this.submit} color="primary" >
               Save
             </Button>
           </DialogActions>
@@ -199,12 +246,12 @@ class Customers extends Component {
   };
   showForm = (index) => {
     this.setState({selectedCustomer: this.state.customers[index]});
-    this.form.handleClickOpen();
+    this.form.open();
   };
   render() {
     return (
       <div className="Customers">
-        <Form ref={ref => (this.form = ref)} items={this.state.items} customer={this.state.selectedCustomer}/>
+        <Form ref={form => (this.form = form)} items={this.state.items} customer={this.state.selectedCustomer}/>
         <Paper>
           <Table>
             <TableHead>
@@ -253,7 +300,7 @@ class App extends Component {
             </Typography>
           </Toolbar>
         </AppBar>
-        <Customers />
+        <Customers/>
       </div>
     );
   }
