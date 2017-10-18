@@ -10,7 +10,7 @@
     "react-dom": "16.0.0",
     "react-number-format": "2.0.4",
     "react-scripts": "1.0.14",
-    "react-autosuggest": "9.3.2",
+    "react-autosuggest": "9.3.2"
   },
   "scripts": {
     "start": "react-scripts start",
