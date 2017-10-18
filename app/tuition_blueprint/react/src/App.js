@@ -16,6 +16,24 @@ import { FormControl, FormControlLabel } from 'material-ui/Form';
 import NumberFormat from 'react-number-format';
 import Radio, { RadioGroup } from 'material-ui/Radio';
 
+// https://gist.github.com/ShirtlessKirk/2134376
+var luhnChk = (function (arr) {
+    return function (ccNum) {
+        var
+            len = ccNum.length,
+            bit = 1,
+            sum = 0,
+            val;
+
+        while (len) {
+            val = parseInt(ccNum.charAt(--len), 10);
+            sum += (bit ^= 1) ? arr[val] : val; // eslint-disable-line no-cond-assign
+        }
+
+        return sum && sum % 10 === 0;
+    };
+}([0, 2, 4, 6, 8, 1, 3, 5, 7, 9]));
+
 class Validators {
   static required = value => {
     if (value) {
@@ -47,6 +65,21 @@ class Validators {
     }
     return false;
   }
+
+  static creditCardNumber = value => {
+    if (value.length === 19 && luhnChk(value.replace(/ /g,""))) {
+      return true;
+    }
+    return false;
+  }
+
+  static creditCardSecurityCode = value => {
+    if (value.length === 3) {
+      return true;
+    }
+    return false;
+  }
+
 }
 
 class ValidatedTextField extends Component {
@@ -57,6 +90,9 @@ class ValidatedTextField extends Component {
     this.validationParent.validateComponent(this);
     this.validationParent.validate();
     return this.onChange(e);
+  };
+  componentWillUnmount() {
+    this.validationParent.unRegisterComponentForValidation(this)
   };
   render() {
     const { validationParent, onChange, ...props} = this.props;
@@ -131,6 +167,15 @@ class Form extends Component {
     }
     return true;
   }
+  unRegisterComponentForValidation = component => {
+    for (var i = 0; i < this.componentsToValidate.length; i++) {
+      // HERE XXX TODO 
+      // console.log(this.component[i].props)
+      // if (this.componentsToValidate[i].props.id === component.props.id) {
+      //     console.log("AAA")
+      // }
+    }
+  };
   requestClose = () => {
     this.setState(this.baseState)
   };
@@ -183,10 +228,10 @@ class Form extends Component {
             </FormControl>
             { this.state.paymentMethod === "credit-card" &&
               <div>
-                <NumberFormat validationParent={this} validators={[Validators.required]} margin="dense" fullWidth label="Credit Card Number" id="creditCardNumber" name="creditCardNumber" customInput={ValidatedTextField} value={this.state.creditCardNumber} onChange={this.change} format="#### #### #### ####" />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardNumber]} margin="dense" fullWidth label="Credit Card Number" id="creditCardNumber" name="creditCardNumber" customInput={ValidatedTextField} value={this.state.creditCardNumber} onChange={this.change} format="#### #### #### ####" />
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={ {width: "32%", marginRight: "2%" } }/>
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={ {width: "32%", marginRight: "2%" } }/>
-                <NumberFormat validationParent={this} validators={[Validators.required]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={ {width: "32%" } }/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardSecurityCode]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={ {width: "32%" } }/>
               </div>
             }
             { this.state.paymentMethod === "e-check" &&
