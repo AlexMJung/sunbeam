@@ -84,7 +84,9 @@ class Validators {
 
 class ValidatedTextField extends Component {
   registerComponentForValidation = ref => {
-    this.validationParent.registerComponentForValidation(ref)
+    if (ref) { // ignore when called with null; see https://github.com/facebook/react/issues/9328
+      this.validationParent.registerComponentForValidation(ref)
+    }
   };
   change = e => {
     this.validationParent.validateComponent(this);
@@ -142,6 +144,7 @@ class Form extends Component {
     }
   };
   registerComponentForValidation = (component) => {
+    // console.log("Register: " + component.props.id);
     this.componentsToValidate.push(component)
   }
   validate = () => {
@@ -169,11 +172,11 @@ class Form extends Component {
   }
   unRegisterComponentForValidation = component => {
     for (var i = 0; i < this.componentsToValidate.length; i++) {
-      // HERE XXX TODO 
-      // console.log(this.component[i].props)
-      // if (this.componentsToValidate[i].props.id === component.props.id) {
-      //     console.log("AAA")
-      // }
+      if (this.componentsToValidate[i].props.id === component.props.id) {
+          // console.log("Unregister: " + component.props.id)
+          this.componentsToValidate.splice(i, 1);
+          return;
+      }
     }
   };
   requestClose = () => {
@@ -341,7 +344,7 @@ class App extends Component {
         <AppBar position="static" color="default">
           <Toolbar>
             <Typography type="title" color="inherit">
-              Tuition Utility
+              Wildflower Tuition Utility
             </Typography>
           </Toolbar>
         </AppBar>
