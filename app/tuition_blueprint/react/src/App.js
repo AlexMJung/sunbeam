@@ -80,6 +80,14 @@ class Validators {
     return false;
   }
 
+  static minimumLength = l => {
+    return value => {
+      if (value.length >= l ) {
+        return true;
+      }
+      return false;
+    }
+  }
 }
 
 class ValidatedTextField extends Component {
@@ -107,8 +115,9 @@ class ValidatedTextField extends Component {
   render() {
     const { validationParent, ...props} = this.props;
     this.validationParent = validationParent;
+    var valid = this.props.validationParent.validateComponent(this)
     return (
-      <StatefulTextField ref={this.registerComponentForValidation} valid={this.props.validationParent.validateComponent(this).toString()} {...props} />
+      <StatefulTextField ref={this.registerComponentForValidation} valid={valid.toString()} error={ this.props.value !== "" && ! valid } {...props} />
     )
   };
 }
@@ -157,7 +166,7 @@ class Form extends Component {
   validate = () => {
     for (var i = 0; i < this.componentsToValidate.length; i++) {
       if (this.componentsToValidate[i].props.valid === "false") {
-        console.log("First invalid: " + this.componentsToValidate[i].props.id);
+        // console.log("First invalid: " + this.componentsToValidate[i].props.id);
         this.setState({ valid: false });
         return
       }
@@ -196,7 +205,7 @@ class Form extends Component {
     this.setState({ itemId: e.target.value });
     this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price });
 
-  }
+  };
   change = e => {
     this.setState({[e.target.name]: e.target.value});
   };
@@ -246,10 +255,10 @@ class Form extends Component {
             }
             { this.state.paymentMethod === "e-check" &&
               <div>
-                <ValidatedTextField validationParent={this} validators={[Validators.required]} id="checkingName" name="checkingName" label="Name on Checking Account"  value={this.state.checkingName} onChange={this.change} style={ {width: "48%", marginRight: "4%" } } />
-                <NumberFormat validationParent={this} validators={[Validators.required]} id="checkingPhone" name="checkingPhone" label="Phone Number" customInput={ValidatedTextField} value={this.state.checkingPhone} onChange={this.change} format="### ### ####" style={ {width: "48%" } } />
-                <NumberFormat validationParent={this} validators={[Validators.required]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={ {width: "48%", marginRight: "4%" } }/>
-                <NumberFormat validationParent={this} validators={[Validators.required]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={ {width: "48%"} }/>
+                <ValidatedTextField validationParent={this} validators={[Validators.required, Validators.minimumLength(3)]} id="checkingName" name="checkingName" label="Name on Checking Account"  value={this.state.checkingName} onChange={this.change} style={ {width: "48%", marginRight: "4%" } } />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(10)]} id="checkingPhone" name="checkingPhone" label="Phone Number" customInput={ValidatedTextField} value={this.state.checkingPhone} onChange={this.change} format="### ### ####" style={ {width: "48%" } } />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(9)]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={ {width: "48%", marginRight: "4%" } }/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(5)]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={ {width: "48%"} }/>
               </div>
             }
           </DialogContent>
