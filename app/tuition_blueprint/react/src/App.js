@@ -83,25 +83,32 @@ class Validators {
 }
 
 class ValidatedTextField extends Component {
+  constructor(props) {
+    super(props);
+    this.lastValue = null;
+  }
   registerComponentForValidation = ref => {
     if (ref) { // ignore when called with null; see https://github.com/facebook/react/issues/9328
       this.validationParent.registerComponentForValidation(ref)
     }
   };
-  change = e => {
-    this.validationParent.validateComponent(this);
-    this.validationParent.validate();
-    return this.onChange(e);
-  };
+  componentDidUpdate() {
+    // this creates a state change, which causes componentDidUpdate to be called again
+    // so, only validate if the value changed
+    if (this.props.value !== this.lastValue) {
+      this.lastValue = this.props.value;
+      this.validationParent.validateComponent(this);
+      this.validationParent.validate();
+    }
+  }
   componentWillUnmount() {
     this.validationParent.unRegisterComponentForValidation(this)
   };
   render() {
-    const { validationParent, onChange, ...props} = this.props;
+    const { validationParent, ...props} = this.props;
     this.validationParent = validationParent;
-    this.onChange = onChange;
     return (
-      <StatefulTextField onChange={this.change} ref={this.registerComponentForValidation} valid={this.props.validationParent.validateComponent(this).toString()} {...props} />
+      <StatefulTextField ref={this.registerComponentForValidation} valid={this.props.validationParent.validateComponent(this).toString()} {...props} />
     )
   };
 }
@@ -188,10 +195,10 @@ class Form extends Component {
   item = e => {
     this.setState({ itemId: e.target.value });
     this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price });
+
   }
   change = e => {
     this.setState({[e.target.name]: e.target.value});
-    this.validate();
   };
   submit = () => {
   };
