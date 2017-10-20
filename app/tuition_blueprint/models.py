@@ -188,7 +188,7 @@ class Deposit(QBOAccountingModel):
             "PrivateNote": "ECheck {0}".format(self.payment.qbo_id)
         }
 
-class ORMBase(db.Model):
+class ORMBase(db.Model, Repr):
     __abstract__  = True
     id = db.Column(db.Integer, primary_key=True)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -246,8 +246,8 @@ class RecurringPayment(ORMBase):
 
         if response.status_code != 201:
             return (False, response.text)
-        data = response.json()
-        return (True, Payment(qbo_id=data['id'], status=data['status'], recurring_payment=self))
+        response_data = response.json()
+        return (True, Payment(qbo_id=response_data['id'], status=response_data['status'], recurring_payment=self))
 
 class Payment(ORMBase):
     __tablename__ = "{0}_payment".format(tablename_prefix)
@@ -309,8 +309,8 @@ class Customer(Repr):
         response = qbo_client.get("{0}/v3/company/{1}/customer/{2}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id, customer_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
             return (False, response.text)
-        data = response.json()["Customer"]
-        return (True, Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=data['Id']).first()))
+        response_data = response.json()["Customer"]
+        return (True, Customer(id=response_data['Id'], email=response_data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=response_data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=response_data['Id']).first()))
 
 class CustomerSchema(ma.Schema):
     class Meta:

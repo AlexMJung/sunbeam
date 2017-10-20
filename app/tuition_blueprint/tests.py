@@ -37,7 +37,11 @@ class TestCase(unittest.TestCase):
                 headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
             )
         cls.bank_account = models.BankAccount(customer=cls.customer, name="Name", routing_number="322079353", account_number="11000000333456781", account_type="PERSONAL_CHECKING", phone="6124231234", qbo_client=cls.qbo_payments_client)
-        cls.bank_account.save()
+        success, value = cls.bank_account.save()
+        if not success:
+            raise Exception, value
+        cls.bank_account.id = value
+
         for qbo_card in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
             cls.qbo_payments_client.delete(
                 "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_card['id']),
@@ -66,7 +70,10 @@ class TestCase(unittest.TestCase):
         )
         token = res.json()['value']
         cls.credit_card = models.CreditCard(customer=cls.customer, token=token, qbo_client=cls.qbo_payments_client)
-        cls.credit_card.save()
+        success, value = cls.credit_card.save()
+        if not success:
+            raise Exception, value
+        cls.credit_card.id = value
 
     def test_recurring_payment_bank_account(self):
         with app.test_request_context():
