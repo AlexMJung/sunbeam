@@ -25,6 +25,11 @@ def customers():
 @blueprint.route('/bank_account', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def bank_account():
+
+    # customer=None, name=None, routing_number=None, account_number=None phone=None, qbo_client=None
+
+
+
     # if get 409 - already exists
     # {"errors":[{"code":"PMT-4009","type":"resource_conflict","message":"Card already exists.","detail":"Existing Card id is 101170669464139291637893.","infoLink":"https://developer.intuit.com/v2/docs?redirectID=PayErrors"}]}
     # parse id from details and use

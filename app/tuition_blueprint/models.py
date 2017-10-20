@@ -34,9 +34,8 @@ class QBOPaymentsModel(Repr):
         return (True, response.json()['id'])
 
 class BankAccount(QBOPaymentsModel):
-    def __init__(self, id=None, status=None, customer=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
+    def __init__(self, id=None, customer=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
         self.id = id
-        self.status = status
         self.customer = customer
         self.name = name
         self.routing_number = routing_number
@@ -63,9 +62,8 @@ class CreditCard(QBOPaymentsModel):
     # We only create cards via tokens.  This allows us to use a client-side form to interact with
     # Intuit's API to store the CC, allowing us to avoid PCI compliance hassles.
 
-    def __init__(self, id=None, status=None, customer=None, token=None, qbo_client=None):
-        self.id = id,
-        self.status = status,
+    def __init__(self, id=None, customer=None, token=None, qbo_client=None):
+        self.id = id
         self.customer = customer
         self.token = token
         self.url = "{0}/quickbooks/v4/customers/{1}/cards/createFromToken".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id)
