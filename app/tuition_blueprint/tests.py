@@ -18,8 +18,19 @@ class TestCase(unittest.TestCase):
         cls.company_id = AuthenticationTokens.query.first().company_id
         cls.qbo_accounting_client = QBO(cls.company_id).client(rate_limit=499)
         cls.qbo_payments_client = QBO(cls.company_id).client(rate_limit=39)
-        cls.customer = models.Customer.customers_from_qbo(cls.company_id, cls.qbo_accounting_client)[0]
-        cls.item = next((i for i in models.Item.items_from_qbo(cls.company_id, cls.qbo_accounting_client) if i.price > 0), None)
+
+        success, value = models.Customer.customers_from_qbo(cls.company_id, cls.qbo_accounting_client)
+        if not success:
+            raise Exception, value
+        customers = value
+        cls.customer = customers[0]
+
+        success, value = models.Item.items_from_qbo(cls.company_id, cls.qbo_accounting_client)
+        if not success:
+            raise Exception, value
+        items = value
+        cls.item = next((i for i in items if i.price > 0), None)
+
         for qbo_bank_account in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
             cls.qbo_payments_client.delete(
                 "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_bank_account['id']),
