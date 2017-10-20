@@ -271,7 +271,6 @@ class Payment(ORMBase):
 class RecurringPaymentSchema(ma.ModelSchema):
     class Meta:
         model = RecurringPayment
-
 recurring_payment_schema = RecurringPaymentSchema(many=True)
 
 class Company(Repr):

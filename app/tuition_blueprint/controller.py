@@ -4,6 +4,9 @@ import models
 from flask_cors import CORS, cross_origin
 from app.authorize_qbo_blueprint.models import QBO
 from app import db
+import json
+import re
+from flask import jsonify
 
 blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1], __name__, template_folder='templates', static_folder='static')
 
@@ -18,37 +21,92 @@ def index():
 def customers():
     success, value = models.Customer.customers_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
     if not success:
-        raise LookupError, "items {1}".format(value)
+        return Response(value, status=500, mimetype='application/json')
     customers = value
     return models.CustomerSchema(many=True).jsonify(customers)
+
+def parse_existing_id_from_error(s):
+     r = re.compile(".* id is ([0-9]+).")
+     m = r.match(json.loads(s)["errors"][0]["detail"])
+     if len(m.groups()) == 1:
+         return m.group(1)
+     return None
 
 @blueprint.route('/bank_account', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def bank_account():
+    qbo_client = QBO(session['qbo_company_id']).client()
+    post = request.get_json()
 
-    # customer=None, name=None, routing_number=None, account_number=None phone=None, qbo_client=None
+    success, value = models.Customers.customer_from_qbo(session['qbo_company_id'], post['customerId'], qbo_client, customer_id, qbo_client).save()
+    if not success:
+        return Response(value, status=500, mimetype='application/json')
+    customer = value
 
+    bank_account = models.BankAccount(
+        customer=customer,
+        name=post['name'],
+        routing_number=post['routing_number'],
+        account_number=post['account_number'],
+        phone=post['phone'],
+        qbo_client=qbo_client
+    )
 
+    success, value = bank_account.save()
+    if not success:
+        id = parse_existing_id_from_error(value)
+        if not id:
+            return Response(value, status=500, mimetype='application/json')
+        value = id
 
-    # if get 409 - already exists
-    # {"errors":[{"code":"PMT-4009","type":"resource_conflict","message":"Card already exists.","detail":"Existing Card id is 101170669464139291637893.","infoLink":"https://developer.intuit.com/v2/docs?redirectID=PayErrors"}]}
-    # parse id from details and use
-    # return ??? payment id, I suppose
-    return "TBD"
+    return jsonify({'id': value})
 
 @blueprint.route('/credit_card', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def credit_card():
-    # if get 409 - already exists
-    # {"errors":[{"code":"PMT-4009","type":"resource_conflict","message":"Card already exists.","detail":"Existing Card id is 101170669464139291637893.","infoLink":"https://developer.intuit.com/v2/docs?redirectID=PayErrors"}]}
-    # parse id from details and use
-    # return ??? payment id, I suppose
-    return "TBD"
+    qbo_client = QBO(session['qbo_company_id']).client()
+    post = request.get_json()
+
+    success, value = models.Customers.customer_from_qbo(session['qbo_company_id'], post['customer_id'], qbo_client).save()
+    if not success:
+        return Response(value, status=500, mimetype='application/json')
+    customer = value
+
+    credit_card = models.CreditCard(
+        customer=customer,
+        token=post['token'],
+        qbo_client=qbo_client
+    )
+
+    success, value = credit_card.save()
+    if not success:
+        id = parse_existing_id_from_error(value)
+        if not id:
+            return Response(value, status=500, mimetype='application/json')
+        value = id
+
+    return jsonify({'id': value})
 
 @blueprint.route('/recurring_payments', methods=['POST'])
 @cross_origin(supports_credentials=True)
 def recurring_payments():
-        return "TBD"
+    post = request.get_json()
+
+    recurring_payment = RecurringPayment(
+        company_id = session['qbo_company_id'],
+        customer_id = post['customer_id'],
+        bank_account_id = post['bank_account_id']
+        credit_card_id = post['credit_card_id'],
+        item_id = post['item_id'],
+        amount = post['amount'],
+        start_date = post['start_date'],
+        end_date = post['end_date']
+    )
+
+    db.session.add(recurring_payment)
+    db.session.commit()
+
+    return ('', 204)
 
 @blueprint.route('/recurring_payments/<int:recurring_payment_id>', methods=['DELETE'])
 @cross_origin(supports_credentials=True)
@@ -63,6 +121,6 @@ def delete_recurring_payment(recurring_payment_id):
 def items():
     success, value = models.Item.items_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
     if not success:
-        raise LookupError, "items {1}".format(value)
+        return Response(value, status=500, mimetype='application/json')
     items = value
     return models.ItemSchema(many=True).jsonify(items)

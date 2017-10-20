@@ -223,6 +223,7 @@ class Form extends Component {
     // switch on payment type
     // if credit card, get token for card QBO API
     // create bank account (from values) or credit card (from token) SUNBEAM API
+    //  PASS CUSTOMER OR CUSTOMER_ID OR SOMETHING WITH THIS TO ID WHO
     // create recurring payment using ID of payment method SUNBEAM API
 
     // CAN I USE PROMISES TO MAKE THIS MANAGEABLE?
