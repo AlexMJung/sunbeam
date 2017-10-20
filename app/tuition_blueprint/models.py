@@ -12,17 +12,26 @@ from flask_marshmallow import Marshmallow
 
 ma = Marshmallow(app)
 
-class QBOPaymentsModel(object):
+class Repr(object):
+    def __repr__(self):
+        return "<{klass} @{id:x} {attrs}>".format(
+            klass=self.__class__.__name__,
+            id=id(self) & 0xFFFFFF,
+            attrs=" ".join("{}={!r}".format(k, v) for k, v in self.__dict__.items()),
+        )
+
+
+class QBOPaymentsModel(Repr):
     def save(self):
         response = self.qbo_client.post(
             self.url,
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
             json=self.data()
         )
+
         if response.status_code != 201:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
-        self.id = response.json()['id']
-        return self.id
+            return (False, response.text)
+        return (True, response.json()['id'])
 
 class BankAccount(QBOPaymentsModel):
     def __init__(self, id=None, status=None, customer=None, name=None, routing_number=None, account_number=None, account_type="PERSONAL_CHECKING", phone=None, qbo_client=None):
@@ -67,7 +76,7 @@ class CreditCard(QBOPaymentsModel):
             "value": self.token
         }
 
-class QBOAccountingModel(object):
+class QBOAccountingModel(Repr):
     def save(self):
         response = self.qbo_client.post(
             self.url,
@@ -75,9 +84,8 @@ class QBOAccountingModel(object):
             json=self.data()
         )
         if response.status_code != 200:
-                raise LookupError, "save {0} {1} {2}".format(response.status_code, response.text, self)
-        self.id = response.json()[self.__class__.__name__]["Id"]
-        return self.id
+            return (False, response.text)
+        return (True, response.json()[self.__class__.__name__]["Id"])
 
 class InvoiceOrSalesReceipt(QBOAccountingModel):
     def __init__(self, id=None, recurring_payment=None, qbo_client=None):
@@ -85,8 +93,10 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
         self.recurring_payment = recurring_payment
         self.qbo_client = qbo_client
         self.url = None
-        self.item = Item.item_from_qbo(self.recurring_payment.company_id, self.recurring_payment.item_id, qbo_client)
-        self.customer = Customer.customer_from_qbo(self.recurring_payment.company_id, self.recurring_payment.customer_id, self.qbo_client)
+        # not sure how to handle failure case here... will blow up and stop everything
+        _, self.customer = Customer.customer_from_qbo(self.recurring_payment.company_id, self.recurring_payment.customer_id, self.qbo_client)
+        # not sure how to handle failure case here... will blow up and stop everything
+        _, self.item = Item.item_from_qbo(self.recurring_payment.company_id, self.recurring_payment.item_id, qbo_client)
 
     def data(self):
         data = {
@@ -117,10 +127,11 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
                 self.url + "/{0}/send".format(self.id),
                 headers={'Accept': 'application/json', 'Content-Type': 'application/octet-stream', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())}
             )
+
             if response.status_code != 200:
-                raise LookupError, "send {0} {1} {2}".format(response.status_code, response.text, self)
-            return True
-        return False
+                return (False, response.text)
+            return (True, None)
+
 
 class Invoice(InvoiceOrSalesReceipt):
     def __init__(self, id=None, recurring_payment=None, qbo_client=None):
@@ -177,7 +188,7 @@ class Deposit(QBOAccountingModel):
             "PrivateNote": "ECheck {0}".format(self.payment.qbo_id)
         }
 
-class Base(db.Model):
+class ORMBase(db.Model):
     __abstract__  = True
     id = db.Column(db.Integer, primary_key=True)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -185,7 +196,7 @@ class Base(db.Model):
 
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
-class RecurringPayment(Base):
+class RecurringPayment(ORMBase):
     __tablename__ = "{0}_recurring_payment".format(tablename_prefix)
     company_id = db.Column(db.String(120))
     customer_id = db.Column(db.String(120))
@@ -198,7 +209,16 @@ class RecurringPayment(Base):
     end_date = db.Column(db.DateTime)
 
     def make_payment(self, qbo_client):
-        item = Item.item_from_qbo(self.company_id, self.item_id, qbo_client)
+        success, value = Item.item_from_qbo(self.company_id, self.item_id, qbo_client)
+        if not success:
+            message = {
+                "subject": "Tuition utility - make_payment failed to retrieve item"
+                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                "recipients": ["dan.grigsby@wildflowerschools.org"],
+                "body": "{0}\n\n{1}\n\n{2}".format(value, self)
+            }
+            return (False, value)
+        item = value
 
         if self.bank_account_id:
             url = "{0}/quickbooks/v4/payments/echecks".format(app.config["QBO_PAYMENTS_API_BASE_URL"])
@@ -225,12 +245,11 @@ class RecurringPayment(Base):
         )
 
         if response.status_code != 201:
-                raise LookupError, "post {0} {1}".format(response.status_code, response.text)
+            return (False, response.text)
         data = response.json()
+        return (True, Payment(qbo_id=data['id'], status=data['status'], recurring_payment=self))
 
-        return Payment(qbo_id=data['id'], status=data['status'], recurring_payment=self)
-
-class Payment(Base):
+class Payment(ORMBase):
     __tablename__ = "{0}_payment".format(tablename_prefix)
     qbo_id = db.Column(db.String(120))
     status = db.Column(db.String(120))
@@ -247,10 +266,8 @@ class Payment(Base):
             headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
         )
         if response.status_code != 200:
-                raise LookupError, "get {0} {1} {2}".format(response.status_code, response.text, self)
-        self.status = response.json()['status']
-
-        return self.status
+            return (False, response.text)
+        return (True, response.json()['status'])
 
 # this schema has to follow Payment, since Payment is a relationship of RecurringPayment
 class RecurringPaymentSchema(ma.ModelSchema):
@@ -259,7 +276,7 @@ class RecurringPaymentSchema(ma.ModelSchema):
 
 recurring_payment_schema = RecurringPaymentSchema(many=True)
 
-class Company(object):
+class Company(Repr):
     def __init__(self, email=None):
         self.id = id
         self.email = email
@@ -268,12 +285,12 @@ class Company(object):
     def company_from_qbo(cls, company_id, qbo_client):
         response = qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
-            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+            return (False, reponse.text)
         data = response.json()["CompanyInfo"]
-        return Customer(email=data.get('Email', {"Address": None})['Address'])
+        return (True, Customer(email=data.get('Email', {"Address": None})['Address']))
 
 # can use QBOAccountingModel as base class if ever need to save
-class Customer(object):
+class Customer(Repr):
     def __init__(self, id=None, email=None, name=None, recurring_payment=None):
         self.id = id
         self.email = email
@@ -284,16 +301,16 @@ class Customer(object):
     def customers_from_qbo(cls, company_id, qbo_client):
         response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
-            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
-        return [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=c['Id']).first()) for c in response.json()['QueryResponse']['Customer']]
+            return (False, response.text)
+        return (True, [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=c['Id']).first()) for c in response.json()['QueryResponse']['Customer']])
 
     @classmethod
     def customer_from_qbo(cls, company_id, customer_id, qbo_client):
         response = qbo_client.get("{0}/v3/company/{1}/customer/{2}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id, customer_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
-            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
+            return (False, response.text)
         data = response.json()["Customer"]
-        return Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=data['Id']).first())
+        return (True, Customer(id=data['Id'], email=data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=data['Id']).first()))
 
 class CustomerSchema(ma.Schema):
     class Meta:
@@ -302,7 +319,7 @@ class CustomerSchema(ma.Schema):
 customers_schema = CustomerSchema(many=True)
 
 # can use QBOAccountingModel as base class if ever need to save
-class Item(object):
+class Item(Repr):
     def __init__(self, id=None, name=None, price=None):
         self.id = id
         self.name = name
@@ -312,16 +329,16 @@ class Item(object):
     def items_from_qbo(cls, company_id, qbo_client):
         response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20item%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
-            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
-        return [Item(id=i['Id'], name=i['Name'], price=i['UnitPrice']) for i in response.json()['QueryResponse']['Item']]
+            return (False, response.text)
+        return (True, [Item(id=i['Id'], name=i['Name'], price=i['UnitPrice']) for i in response.json()['QueryResponse']['Item']])
 
     @classmethod
     def item_from_qbo(cls, company_id, item_id, qbo_client):
         response = qbo_client.get("{0}/v3/company/{1}/item/{2}".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id, item_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
-            raise LookupError, "get {0} {1}".format(response.status_code, response.text)
+            return (False, response.text)
         qbo_item=response.json()['Item']
-        return Item(id=qbo_item['Id'], name=qbo_item['Name'], price=qbo_item['UnitPrice'])
+        return (True, Item(id=qbo_item['Id'], name=qbo_item['Name'], price=qbo_item['UnitPrice']))
 
 class ItemSchema(ma.Schema):
     class Meta:
@@ -329,7 +346,7 @@ class ItemSchema(ma.Schema):
 items_schema = ItemSchema(many=True)
 
 # can use QBOAccountingModel as base class if ever need to save
-class Account(object):
+class Account(Repr):
     def __init__(self, id=None):
         self.id = id
 
@@ -338,8 +355,8 @@ class Account(object):
         # convention is that there is one checking account and it is where deposits are made - note set up implication
         response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20account%20where%20AccountSubType%3D%27Checking%27&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
-            raise LookupError, "query {0} {1}".format(response.status_code, response.text)
-        return Account(id=response.json()['QueryResponse']['Account'][0]['Id'])
+            return (False, response.text)
+        return (True, Account(id=response.json()['QueryResponse']['Account'][0]['Id']))
 
 class MailWithLogging(Mail):
     def send(self, message):
@@ -367,9 +384,30 @@ class Cron(object):
 
     @classmethod
     def send_invoice(cls, company, recurring_payment, qbo_client):
-        customer = Customer.customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
+        success, value = Customer.customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
+        if not success:
+            message = {
+                "subject": "Tuition utility - send_invoice failed to fetch customer from qbo "
+                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                "recipients": ["dan.grigsby@wildflowerschools.org"],
+                "body": "{0}\n\n{1}".format(value, recurring_payment)
+            }
+            mail.send(Message(**message))
+            return
+        customer = value
+
         invoice = Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
-        invoice.save()
+        success, value = invoice.save()
+        if not success:
+            message = {
+                "subject": "Tuition utility - send_invoice failed to save invoice"
+                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                "recipients": ["dan.grigsby@wildflowerschools.org"],
+                "body": "{0}\n\n{1}".format(value, invoice)
+            }
+            mail.send(Message(**message))
+            return
+
         if customer.email:
             message = {
                 "subject": "Tuition payment for {0} declined".format(customer.name),
@@ -398,14 +436,74 @@ class Cron(object):
             authentication_token = AuthenticationTokens.query.filter_by(company_id = payment.recurring_payment.company_id).first()
             qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
             qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
-            company = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
-            payment.update_status_from_qbo(qbo_payments_client)
+            success, value = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
+            if not success:
+                message = {
+                    "subject": "Tuition utility - update_payments failed to fetch company from qbo"
+                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                    "recipients": ["dan.grigsby@wildflowerschools.org"],
+                    "body": "{0}\n\n{1}".format(value, authentication_token.company_id)
+                }
+                mail.send(Message(**message))
+                continue
+            company = value
+            success, value = payment.update_status_from_qbo(qbo_payments_client)
+            if not success:
+                message = {
+                    "subject": "Tuition utility - update_payments failed to update status from qbo"
+                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                    "recipients": ["dan.grigsby@wildflowerschools.org"],
+                    "body": "{0}\n\n{1}".format(value, payment)
+                }
+                mail.send(Message(**message))
+                continue
+
             db.session.commit()
             if payment.status != "PENDING":
                 if payment.status == "SUCCEEDED":
                     sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
-                    sales_receipt.save()
-                    sales_receipt.send()
+                    success, value = sales_receipt.save()
+                    if not success:
+                        message = {
+                            "subject": "Tuition utility - update_payments failed to save sales receipt"
+                            "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                            "recipients": ["dan.grigsby@wildflowerschools.org"],
+                            "body": "{0}\n\n{1}".format(value, sales_receipt)
+                        }
+                        mail.send(Message(**message))
+                        continue
+                    else
+                        transaction_id = value
+                        success, value = sales_receipt.send()
+                        if not success:
+                            message = {
+                                "subject": "Tuition utility - update_payments failed to send sales receipt"
+                                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                "recipients": ["dan.grigsby@wildflowerschools.org"],
+                                "body": "{0}\n\n{1}".format(value, sales_receipt)
+                            }
+                            mail.send(Message(**message))
+                        success, value = Account.deposit_account_from_qbo(company.company_id, qbo_accounting_client)
+                        if not success:
+                            message = {
+                                "subject": "Tuition utility - update_payments failed to retrieve deposit account"
+                                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                "recipients": ["dan.grigsby@wildflowerschools.org"],
+                                "body": "{0}\n\n{1}".format(value, company.company_id)
+                            }
+                            mail.send(Message(**message))
+                        else:
+                            deposit_account = value
+                            deposit = Deposit(company_id=company.company_id, account=deposit_account, transaction_id=transaction_id, payment=payment, qbo_client=qbo_accounting_client)
+                            success, value = deposit.save()
+                            if not success:
+                                message = {
+                                    "subject": "Tuition utility - update_payments failed to save deposit"
+                                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                    "recipients": ["dan.grigsby@wildflowerschools.org"],
+                                    "body": "{0}\n\n{1}".format(value, deposit)
+                                }
+                                mail.send(Message(**message))
                 elif payment.status == "DECLINED":
                     Cron.send_invoice(company, payment.recurring_payment, qbo_accounting_client)
 
@@ -415,19 +513,59 @@ class Cron(object):
         for authentication_token in AuthenticationTokens.query.all():
             qbo_accounting_client = QBO(authentication_token.company_id).client(rate_limit=500)
             qbo_payments_client = QBO(authentication_token.company_id).client(rate_limit=40)
-            company = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
+            success, value = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
+            if not success:
+                message = {
+                    "subject": "Tuition utility - make_payments failed to fetch company from qbo"
+                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                    "recipients": ["dan.grigsby@wildflowerschools.org"],
+                    "body": "{0}\n\n{1}".format(value, authentication_token.company_id)
+                }
+                mail.send(Message(**message))
+                continue
+
+            company = value
             app.logger.info("Processing automatic tuition payments for {0}".format(authentication_token.company_id))
             for recurring_payment in RecurringPayment.query.filter_by(company_id=str(authentication_token.company_id)).all():
                 if (recurring_payment.start_date < now and now <= recurring_payment.end_date):
                     # look for payment this month, skip if found
                     if not next((p for p in recurring_payment.payments if p.date_created.month() == now.month()), None):
                         app.logger.info("Processing recurring payment {0}".format(recurring_payment.id))
-                        payment = recurring_payment.make_payment(qbo_payments_client)
+                        success, value = recurring_payment.make_payment(qbo_payments_client)
+                        if not success:
+                            message = {
+                                "subject": "Tuition utility - make_payments failed to make payment"
+                                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                "recipients": ["dan.grigsby@wildflowerschools.org"],
+                                "body": "{0}\n\n{1}".format(value, recurring_payment)
+                            }
+                            mail.send(Message(**message))
+                            continue
+                        payment = value
                         db.session.add(payment)
                         db.session.commit()
                         if payment.status == "CAPTURED":
                             sales_receipt = SalesReceipt(recurring_payment=payment.recurring_payment, payment=payment, qbo_client=qbo_accounting_client)
-                            sales_receipt.save()
-                            sales_receipt.send()
+                            success, value = sales_receipt.save()
+                            if not success:
+                                message = {
+                                    "subject": "Tuition utility - make_payments failed to save sales receipt"
+                                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                    "recipients": ["dan.grigsby@wildflowerschools.org"],
+                                    "body": "{0}\n\n{1}".format(value, sales_receipt)
+                                }
+                                mail.send(Message(**message))
+                                continue
+                            else
+                                success, value = sales_receipt.send()
+                                if not success:
+                                    message = {
+                                        "subject": "Tuition utility - make_payments failed to send sales receipt"
+                                        "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                                        "recipients": ["dan.grigsby@wildflowerschools.org"],
+                                        "body": "{0}\n\n{1}".format(value, sales_receipt)
+                                    }
+                                    mail.send(Message(**message))
+                                # no reason to do Deposit because QBO handles automatically for CC
                         elif payment.status == "DECLINED":
                             Cron.send_invoice(company, payment.recurring_payment, qbo_accounting_client)

@@ -16,6 +16,10 @@ import { FormControl, FormControlLabel } from 'material-ui/Form';
 import NumberFormat from 'react-number-format';
 import Radio, { RadioGroup } from 'material-ui/Radio';
 
+var tuitionBlueprintBaseUrl = "http://localhost:5000/tuition";
+var qboBaseUrl = "https://sandbox.api.intuit.com"
+
+
 // https://gist.github.com/ShirtlessKirk/2134376
 var luhnChk = (function (arr) {
     return function (ccNum) {
@@ -33,6 +37,12 @@ var luhnChk = (function (arr) {
         return sum && sum % 10 === 0;
     };
 }([0, 2, 4, 6, 8, 1, 3, 5, 7, 9]));
+
+function uuidv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) // eslint-disable-line no-mixed-operators
+  )
+}
 
 class Validators {
   static required = value => {
@@ -210,6 +220,42 @@ class Form extends Component {
     this.setState({[e.target.name]: e.target.value});
   };
   submit = () => {
+    // switch on payment type
+    // if credit card, get token for card QBO API
+    // create bank account (from values) or credit card (from token) SUNBEAM API
+    // create recurring payment using ID of payment method SUNBEAM API
+
+    // CAN I USE PROMISES TO MAKE THIS MANAGEABLE?
+
+    fetch(
+      qboBaseUrl + "/quickbooks/v4/payments/tokens",
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Request-Id': uuidv4()
+        },
+        method: "POST",
+        body: JSON.stringify(
+          {
+            "card": {
+              "expYear": this.state.creditCardExpirationYear,
+              "expMonth": this.state.creditCardExpirationMonth,
+              "number": this.state.creditCardNumber,
+              "cvc": this.state.creditCardSecurityCode
+            }
+          }
+        ),
+        credentials: 'include'
+      }
+    ).then( (response) => {
+      // HERE
+    }).then( (parsed_json) => {
+      // HERE
+    });
+
+
+
   };
   render() {
     if (this.props.customer && this.props.items) {
@@ -295,13 +341,13 @@ class Customers extends Component {
       customers: [],
       selectedCustomer: null
      };
-    fetch("http://localhost:5000/tuition/customers", {credentials: 'include'})
+    fetch(tuitionBlueprintBaseUrl + "/customers", {credentials: 'include'})
       .then( (response) => {
         return response.json()
       }).then( (parsed_json) => {
         this.setState({customers: parsed_json})
       });
-    fetch("http://localhost:5000/tuition/items", {credentials: 'include'})
+    fetch(tuitionBlueprintBaseUrl + "/items", {credentials: 'include'})
       .then( (response) => {
         return response.json()
       }).then( (parsed_json) => {
