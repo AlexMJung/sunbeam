@@ -472,7 +472,7 @@ class Cron(object):
                         }
                         mail.send(Message(**message))
                         continue
-                    else
+                    else:
                         transaction_id = value
                         success, value = sales_receipt.send()
                         if not success:
@@ -556,7 +556,7 @@ class Cron(object):
                                 }
                                 mail.send(Message(**message))
                                 continue
-                            else
+                            else:
                                 success, value = sales_receipt.send()
                                 if not success:
                                     message = {
