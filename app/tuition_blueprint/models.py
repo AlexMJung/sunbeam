@@ -212,7 +212,7 @@ class RecurringPayment(ORMBase):
         success, value = Item.item_from_qbo(self.company_id, self.item_id, qbo_client)
         if not success:
             message = {
-                "subject": "Tuition utility - make_payment failed to retrieve item"
+                "subject": "Tuition utility - make_payment failed to retrieve item",
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                 "recipients": ["dan.grigsby@wildflowerschools.org"],
                 "body": "{0}\n\n{1}\n\n{2}".format(value, self)
@@ -387,7 +387,7 @@ class Cron(object):
         success, value = Customer.customer_from_qbo(recurring_payment.company_id, recurring_payment.customer_id, qbo_client)
         if not success:
             message = {
-                "subject": "Tuition utility - send_invoice failed to fetch customer from qbo "
+                "subject": "Tuition utility - send_invoice failed to fetch customer from qbo",
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                 "recipients": ["dan.grigsby@wildflowerschools.org"],
                 "body": "{0}\n\n{1}".format(value, recurring_payment)
@@ -400,7 +400,7 @@ class Cron(object):
         success, value = invoice.save()
         if not success:
             message = {
-                "subject": "Tuition utility - send_invoice failed to save invoice"
+                "subject": "Tuition utility - send_invoice failed to save invoice",
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                 "recipients": ["dan.grigsby@wildflowerschools.org"],
                 "body": "{0}\n\n{1}".format(value, invoice)
@@ -439,7 +439,7 @@ class Cron(object):
             success, value = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
             if not success:
                 message = {
-                    "subject": "Tuition utility - update_payments failed to fetch company from qbo"
+                    "subject": "Tuition utility - update_payments failed to fetch company from qbo",
                     "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                     "recipients": ["dan.grigsby@wildflowerschools.org"],
                     "body": "{0}\n\n{1}".format(value, authentication_token.company_id)
@@ -450,7 +450,7 @@ class Cron(object):
             success, value = payment.update_status_from_qbo(qbo_payments_client)
             if not success:
                 message = {
-                    "subject": "Tuition utility - update_payments failed to update status from qbo"
+                    "subject": "Tuition utility - update_payments failed to update status from qbo",
                     "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                     "recipients": ["dan.grigsby@wildflowerschools.org"],
                     "body": "{0}\n\n{1}".format(value, payment)
@@ -465,7 +465,7 @@ class Cron(object):
                     success, value = sales_receipt.save()
                     if not success:
                         message = {
-                            "subject": "Tuition utility - update_payments failed to save sales receipt"
+                            "subject": "Tuition utility - update_payments failed to save sales receipt",
                             "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                             "recipients": ["dan.grigsby@wildflowerschools.org"],
                             "body": "{0}\n\n{1}".format(value, sales_receipt)
@@ -477,7 +477,7 @@ class Cron(object):
                         success, value = sales_receipt.send()
                         if not success:
                             message = {
-                                "subject": "Tuition utility - update_payments failed to send sales receipt"
+                                "subject": "Tuition utility - update_payments failed to send sales receipt",
                                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                                 "recipients": ["dan.grigsby@wildflowerschools.org"],
                                 "body": "{0}\n\n{1}".format(value, sales_receipt)
@@ -486,7 +486,7 @@ class Cron(object):
                         success, value = Account.deposit_account_from_qbo(company.company_id, qbo_accounting_client)
                         if not success:
                             message = {
-                                "subject": "Tuition utility - update_payments failed to retrieve deposit account"
+                                "subject": "Tuition utility - update_payments failed to retrieve deposit account",
                                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                                 "recipients": ["dan.grigsby@wildflowerschools.org"],
                                 "body": "{0}\n\n{1}".format(value, company.company_id)
@@ -498,7 +498,7 @@ class Cron(object):
                             success, value = deposit.save()
                             if not success:
                                 message = {
-                                    "subject": "Tuition utility - update_payments failed to save deposit"
+                                    "subject": "Tuition utility - update_payments failed to save deposit",
                                     "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                                     "recipients": ["dan.grigsby@wildflowerschools.org"],
                                     "body": "{0}\n\n{1}".format(value, deposit)
@@ -516,7 +516,7 @@ class Cron(object):
             success, value = Company.company_from_qbo(authentication_token.company_id, qbo_accounting_client)
             if not success:
                 message = {
-                    "subject": "Tuition utility - make_payments failed to fetch company from qbo"
+                    "subject": "Tuition utility - make_payments failed to fetch company from qbo",
                     "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                     "recipients": ["dan.grigsby@wildflowerschools.org"],
                     "body": "{0}\n\n{1}".format(value, authentication_token.company_id)
@@ -534,7 +534,7 @@ class Cron(object):
                         success, value = recurring_payment.make_payment(qbo_payments_client)
                         if not success:
                             message = {
-                                "subject": "Tuition utility - make_payments failed to make payment"
+                                "subject": "Tuition utility - make_payments failed to make payment",
                                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                                 "recipients": ["dan.grigsby@wildflowerschools.org"],
                                 "body": "{0}\n\n{1}".format(value, recurring_payment)
@@ -549,7 +549,7 @@ class Cron(object):
                             success, value = sales_receipt.save()
                             if not success:
                                 message = {
-                                    "subject": "Tuition utility - make_payments failed to save sales receipt"
+                                    "subject": "Tuition utility - make_payments failed to save sales receipt",
                                     "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                                     "recipients": ["dan.grigsby@wildflowerschools.org"],
                                     "body": "{0}\n\n{1}".format(value, sales_receipt)
@@ -560,7 +560,7 @@ class Cron(object):
                                 success, value = sales_receipt.send()
                                 if not success:
                                     message = {
-                                        "subject": "Tuition utility - make_payments failed to send sales receipt"
+                                        "subject": "Tuition utility - make_payments failed to send sales receipt",
                                         "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
                                         "recipients": ["dan.grigsby@wildflowerschools.org"],
                                         "body": "{0}\n\n{1}".format(value, sales_receipt)
