@@ -23,7 +23,7 @@ class TestCase(unittest.TestCase):
         if not success:
             raise Exception, value
         customers = value
-        cls.customer = customers[0]
+        cls.customer = customers[1]
 
         success, value = models.Item.items_from_qbo(cls.company_id, cls.qbo_accounting_client)
         if not success:
@@ -45,7 +45,7 @@ class TestCase(unittest.TestCase):
         # cls.bank_account.id = value
 
         d = cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json()[0]
-        cls.bank_account = models.BankAccount(id=d["id"], customer=cls.customer, name=d["Name"], routing_number=d["routingNumber"], account_number=d["accountNumber"], account_type=d["accountType"], phone=d["phone"], qbo_client=cls.qbo_payments_client)
+        cls.bank_account = models.BankAccount(id=d["id"], customer=cls.customer, name=d["name"], routing_number=d["routingNumber"], account_number=d["accountNumber"], account_type=d["accountType"], phone=d["phone"], qbo_client=cls.qbo_payments_client)
 
         # Intuit Sandbox API unreliable about creating new CC, so commented out
 
@@ -97,18 +97,22 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment)
             db.session.commit()
 
-            payment = recurring_payment.make_payment(TestCase.qbo_payments_client)
+            success, payment = recurring_payment.make_payment(TestCase.qbo_payments_client)
+            assert success
             db.session.add(payment)
             db.session.commit()
 
             payment.update_status_from_qbo(TestCase.qbo_payments_client)
 
             sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=TestCase.qbo_accounting_client)
-            transaction_id = sales_receipt.save()
+            success, transaction_id = sales_receipt.save()
+            assert success
             sales_receipt.send()
 
-            deposit_account = models.Account.deposit_account_from_qbo(TestCase.company_id, TestCase.qbo_accounting_client)
-            models.Deposit(company_id=TestCase.company_id, account=deposit_account, transaction_id=transaction_id, payment=payment, qbo_client=TestCase.qbo_accounting_client).save()
+            success, deposit_account = models.Account.deposit_account_from_qbo(TestCase.company_id, TestCase.qbo_accounting_client)
+            assert success
+            success, transaction_id = models.Deposit(company_id=TestCase.company_id, account=deposit_account, transaction_id=transaction_id, payment=payment, qbo_client=TestCase.qbo_accounting_client).save()
+            assert success
 
             db.session.delete(recurring_payment)
             db.session.commit()
@@ -125,7 +129,8 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment)
             db.session.commit()
 
-            payment = recurring_payment.make_payment(TestCase.qbo_payments_client)
+            success, payment = recurring_payment.make_payment(TestCase.qbo_payments_client)
+            assert success
             db.session.add(payment)
             db.session.commit()
 
@@ -232,8 +237,10 @@ class TestCase(unittest.TestCase):
                 }
             )
             token = res.json()['value']
+
             credit_card = models.CreditCard(customer=TestCase.customer, token=token, qbo_client=TestCase.qbo_payments_client)
-            credit_card.save()
+            success, credit_card_id = credit_card.save()
+            credit_card.id = credit_card_id
 
             recurring_payment = models.RecurringPayment(
                 company_id = TestCase.company_id,
@@ -292,7 +299,7 @@ class TestCase(unittest.TestCase):
                 customer_id = TestCase.customer.id,
                 bank_account_id = TestCase.bank_account.id,
                 item_id = TestCase.item.id,
-                amount = 4.44, # triggers DECLINED
+                amount = 3.33, # triggers DECLINED
                 start_date = datetime.now() - dateutil.relativedelta.relativedelta(months=1),
                 end_date = datetime.now() + dateutil.relativedelta.relativedelta(months=1)
             )

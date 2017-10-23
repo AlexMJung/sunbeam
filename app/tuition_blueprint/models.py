@@ -261,7 +261,9 @@ class Payment(ORMBase):
         )
         if response.status_code != 200:
             return (False, response.text)
-        return (True, response.json()['status'])
+        status = response.json()['status']
+        self.status = status
+        return (True, status)
 
 # this schema has to follow Payment, since Payment is a relationship of RecurringPayment
 class RecurringPaymentSchema(ma.ModelSchema):
@@ -450,7 +452,6 @@ class Cron(object):
                 }
                 mail.send(Message(**message))
                 continue
-
             db.session.commit()
             if payment.status != "PENDING":
                 if payment.status == "SUCCEEDED":
