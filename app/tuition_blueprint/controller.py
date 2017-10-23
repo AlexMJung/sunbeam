@@ -95,7 +95,7 @@ def recurring_payments():
     recurring_payment = RecurringPayment(
         company_id = session['qbo_company_id'],
         customer_id = post['customer_id'],
-        bank_account_id = post['bank_account_id']
+        bank_account_id = post['bank_account_id'],
         credit_card_id = post['credit_card_id'],
         item_id = post['item_id'],
         amount = post['amount'],

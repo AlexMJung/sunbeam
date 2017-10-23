@@ -45,10 +45,6 @@ class BankAccount(QBOPaymentsModel):
         self.qbo_client = qbo_client
         self.url = "{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], self.customer.id)
 
-    @classmethod
-    def bank_account_for(cls, qbo_client, customer, bank_account_id):
-        return BankAccount(id=bank_account_id, customer=customer, qbo_client=qbo_client)
-
     def data(self):
         return {
             "name": self.name,

@@ -31,49 +31,59 @@ class TestCase(unittest.TestCase):
         items = value
         cls.item = next((i for i in items if i.price > 0), None)
 
-        for qbo_bank_account in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
-            cls.qbo_payments_client.delete(
-                "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_bank_account['id']),
-                headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
-            )
-        cls.bank_account = models.BankAccount(customer=cls.customer, name="Name", routing_number="322079353", account_number="11000000333456781", account_type="PERSONAL_CHECKING", phone="6124231234", qbo_client=cls.qbo_payments_client)
-        success, value = cls.bank_account.save()
-        if not success:
-            raise Exception, value
-        cls.bank_account.id = value
+        # Intuit Sandbox API unreliable about creating new Bank Accounts, so commented out
 
-        for qbo_card in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
-            cls.qbo_payments_client.delete(
-                "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_card['id']),
-                headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
-            )
-        # don't use qbo_client for this - this API does not - can not - have auth
-        res = requests.post(
-            "{0}/quickbooks/v4/payments/tokens".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
-            headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
-            json={
-                "card": {
-                    "expYear": "2020",
-                    "expMonth": "02",
-                    "address": {
-                      "region": "CA",
-                      "postalCode": "94086",
-                      "streetAddress": "1130 Kifer Rd",
-                      "country": "US",
-                      "city": "Sunnyvale"
-                    },
-                    "name": "emulate=0",
-                    "cvc": "123",
-                    "number": "4111111111111111"
-                }
-            }
-        )
-        token = res.json()['value']
-        cls.credit_card = models.CreditCard(customer=cls.customer, token=token, qbo_client=cls.qbo_payments_client)
-        success, value = cls.credit_card.save()
-        if not success:
-            raise Exception, value
-        cls.credit_card.id = value
+        # for qbo_bank_account in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
+        #     cls.qbo_payments_client.delete(
+        #         "{0}/quickbooks/v4/customers/{1}/bank-accounts/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_bank_account['id']),
+        #         headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
+        #     )
+        # cls.bank_account = models.BankAccount(customer=cls.customer, name="Name", routing_number="322079353", account_number="11000000333456781", account_type="PERSONAL_CHECKING", phone="6124231234", qbo_client=cls.qbo_payments_client)
+        # success, value = cls.bank_account.save()
+        # if not success:
+        #     raise Exception, value
+        # cls.bank_account.id = value
+
+        d = cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/bank-accounts".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json()[0]
+        cls.bank_account = models.BankAccount(id=d["id"], customer=cls.customer, name=d["Name"], routing_number=d["routingNumber"], account_number=d["accountNumber"], account_type=d["accountType"], phone=d["phone"], qbo_client=cls.qbo_payments_client)
+
+        # Intuit Sandbox API unreliable about creating new CC, so commented out
+
+        # for qbo_card in cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json():
+        #     cls.qbo_payments_client.delete(
+        #         "{0}/quickbooks/v4/customers/{1}/cards/{2}".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id, qbo_card['id']),
+        #         headers={'Accept': 'application/json', 'Request-Id': str(uuid.uuid1())}
+        #     )
+        # # don't use qbo_client for this - this API does not - can not - have auth
+        # res = requests.post(
+        #     "{0}/quickbooks/v4/payments/tokens".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
+        #     headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+        #     json={
+        #         "card": {
+        #             "expYear": "2020",
+        #             "expMonth": "02",
+        #             "address": {
+        #               "region": "CA",
+        #               "postalCode": "94086",
+        #               "streetAddress": "1130 Kifer Rd",
+        #               "country": "US",
+        #               "city": "Sunnyvale"
+        #             },
+        #             "name": "emulate=0",
+        #             "cvc": "123",
+        #             "number": "4111111111111111"
+        #         }
+        #     }
+        # )
+        # token = res.json()['value']
+        # cls.credit_card = models.CreditCard(customer=cls.customer, token=token, qbo_client=cls.qbo_payments_client)
+        # success, value = cls.credit_card.save()
+        # if not success:
+        #     raise Exception, value
+        # cls.credit_card.id = value
+
+        d = cls.qbo_payments_client.get("{0}/quickbooks/v4/customers/{1}/cards".format(app.config["QBO_PAYMENTS_API_BASE_URL"], cls.customer.id), headers={'Accept': 'application/json'}).json()[0]
+        cls.credit_card = models.CreditCard(id=d["id"], customer=cls.customer, qbo_client=cls.qbo_payments_client)
 
     def test_recurring_payment_bank_account(self):
         with app.test_request_context():
