@@ -37,12 +37,6 @@ var luhnChk = (function (arr) {
     };
 }([0, 2, 4, 6, 8, 1, 3, 5, 7, 9]));
 
-function uuidv4() {
-  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) // eslint-disable-line no-mixed-operators
-  )
-}
-
 class Validators {
   static required = value => {
     if (value) {
@@ -218,60 +212,90 @@ class Form extends Component {
   change = e => {
     this.setState({[e.target.name]: e.target.value});
   };
-  getTokenForCreditCard = () => {
-    fetch(
-      qboBaseUrl + "/quickbooks/v4/payments/tokens",
-      {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Request-Id': uuidv4()
-        },
-        method: "POST",
-        body: JSON.stringify(
-          {
-            "card": {
-              "expYear": this.state.creditCardExpirationYear,
-              "expMonth": this.state.creditCardExpirationMonth,
-              "number": this.state.creditCardNumber,
-              "cvc": this.state.creditCardSecurityCode
-            }
-          }
-        ),
-        credentials: 'include'
-      }
-    ).then( (response) => {
-      return response.json();
-    }).then( (parsed_json) => {
-      return parsed_json['value'];
-    });
-  }
-  submit = () => {
-    var promiseChain;
-
-    if (this.paymentMethod === 'credit-card') {
-      promiseChain = new Promise( (resolve, reject) => {
-
-      } );
-    } else {
-      promiseChain = new Promise( (resolve, reject) => {
-
-      } );
-
+  handleErrors = response => {
+    if (response.status <= 200 && response.status < 300) {
+      return response
     }
+    // TODO XXX SHOW ERROR UI
+    console.log(response)
+  }
+  submit = async () => {
+    if (this.state.paymentMethod === 'credit-card') {
+      var token = await fetch(
+        qboBaseUrl + "/quickbooks/v4/payments/tokens",
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          method: "POST",
+          body: JSON.stringify(
+            {
+              "card": {
+                expYear: "20" + this.state.creditCardExpirationYear,
+                expMonth: this.state.creditCardExpirationMonth,
+                number: this.state.creditCardNumber.replace(/\s+/g, ''),
+                cvc: this.state.creditCardSecurityCode
+              }
+            }
+          ),
+          credentials: 'omit'
+        }
+      ).then( response => {
+        return response.json();
+      }).then( parsed_json => {
+        return parsed_json['value'];
+      }).catch( error => {
+        console.log(error)
+      });
 
+      var creditCardId = await fetch(
+        tuitionBlueprintBaseUrl + "/credit_card",
+        {
+          credentials: 'include',
+          method: "POST",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customer_id: this.props.customer.id,
+            token: token
+          })
+        }
+      ).then( this.handleErrors )
+      .then( response => {
+        return response.json();
+      }).then( parsed_json => {
+        return parsed_json["id"]
+      })
+    } else if (this.state.paymentMethod === 'e-check') {
+      var bankAccountId = await fetch(
+        tuitionBlueprintBaseUrl + "/bank_account",
+        {
+          credentials: 'include',
+          method: "POST",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customer_id: this.props.customer.id,
+            name: this.state.checkingName,
+            routing_number: this.state.checkingRoutingNumber,
+            account_number: this.state.checkingAccountNumber,
+            phone: this.state.checkingPhone.replace(/\s+/g, '')
+          })
+        }
+      ).then( this.handleErrors )
+      .then( response => {
+        return response.json();
+      }).then( parsed_json => {
+        return parsed_json["id"]
+      })
 
-    // switch on payment type
-    // if credit card, get token for card QBO API
-    // create bank account (from values) or credit card (from token) SUNBEAM API
-    //  PASS CUSTOMER OR CUSTOMER_ID OR SOMETHING WITH THIS TO ID WHO
-    // create recurring payment using ID of payment method SUNBEAM API
-
-    // CAN I USE PROMISES TO MAKE THIS MANAGEABLE?
-
-
-
-
+      console.log("bankAccountId " + bankAccountId);
+    }
   };
   render() {
     if (this.props.customer && this.props.items) {
@@ -357,6 +381,7 @@ class Customers extends Component {
       customers: [],
       selectedCustomer: null
      };
+
     fetch(tuitionBlueprintBaseUrl + "/customers", {credentials: 'include'})
       .then( this.handleErrors )
       .then( response => {

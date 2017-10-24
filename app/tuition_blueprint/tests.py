@@ -57,7 +57,7 @@ class TestCase(unittest.TestCase):
         # # don't use qbo_client for this - this API does not - can not - have auth
         # res = requests.post(
         #     "{0}/quickbooks/v4/payments/tokens".format(app.config["QBO_PAYMENTS_API_BASE_URL"]),
-        #     headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot', 'Request-Id': str(uuid.uuid1())},
+        #     headers={'Accept': 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'wfbot'},
         #     json={
         #         "card": {
         #             "expYear": "2020",

@@ -20,7 +20,6 @@ class Repr(object):
             attrs=" ".join("{}={!r}".format(k, v) for k, v in self.__dict__.items()),
         )
 
-
 class QBOPaymentsModel(Repr):
     def save(self):
         response = self.qbo_client.post(

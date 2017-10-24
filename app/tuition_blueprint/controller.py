@@ -38,11 +38,11 @@ def customers():
     return models.CustomerSchema(many=True).jsonify(customers)
 
 def parse_existing_id_from_error(s):
-     r = re.compile(".* id is ([0-9]+).")
-     m = r.match(json.loads(s)["errors"][0]["detail"])
-     if len(m.groups()) == 1:
-         return m.group(1)
-     return None
+    r = re.compile(".* id is ([0-9]+).")
+    m = r.match(json.loads(s)["errors"][0]["detail"])
+    if m and len(m.groups()) == 1:
+        return m.group(1)
+    return None
 
 @blueprint.route('/bank_account', methods=['POST'])
 @cross_origin(supports_credentials=True)
@@ -51,7 +51,7 @@ def bank_account():
     qbo_client = QBO(session['qbo_company_id']).client()
     post = request.get_json()
 
-    success, value = models.Customers.customer_from_qbo(session['qbo_company_id'], post['customerId'], qbo_client, customer_id, qbo_client).save()
+    success, value = models.Customer.customer_from_qbo(session['qbo_company_id'], post['customer_id'], qbo_client)
     if not success:
         return Response(value, status=500, mimetype='application/json')
     customer = value
@@ -81,7 +81,7 @@ def credit_card():
     qbo_client = QBO(session['qbo_company_id']).client()
     post = request.get_json()
 
-    success, value = models.Customers.customer_from_qbo(session['qbo_company_id'], post['customer_id'], qbo_client).save()
+    success, value = models.Customer.customer_from_qbo(session['qbo_company_id'], post['customer_id'], qbo_client)
     if not success:
         return Response(value, status=500, mimetype='application/json')
     customer = value
@@ -94,6 +94,7 @@ def credit_card():
 
     success, value = credit_card.save()
     if not success:
+        print value
         id = parse_existing_id_from_error(value)
         if not id:
             return Response(value, status=500, mimetype='application/json')
