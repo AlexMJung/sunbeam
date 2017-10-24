@@ -19,7 +19,6 @@ import Radio, { RadioGroup } from 'material-ui/Radio';
 var tuitionBlueprintBaseUrl = "http://localhost:5000/tuition";
 var qboBaseUrl = "https://sandbox.api.intuit.com"
 
-
 // https://gist.github.com/ShirtlessKirk/2134376
 var luhnChk = (function (arr) {
     return function (ccNum) {
@@ -219,15 +218,7 @@ class Form extends Component {
   change = e => {
     this.setState({[e.target.name]: e.target.value});
   };
-  submit = () => {
-    // switch on payment type
-    // if credit card, get token for card QBO API
-    // create bank account (from values) or credit card (from token) SUNBEAM API
-    //  PASS CUSTOMER OR CUSTOMER_ID OR SOMETHING WITH THIS TO ID WHO
-    // create recurring payment using ID of payment method SUNBEAM API
-
-    // CAN I USE PROMISES TO MAKE THIS MANAGEABLE?
-
+  getTokenForCreditCard = () => {
     fetch(
       qboBaseUrl + "/quickbooks/v4/payments/tokens",
       {
@@ -250,10 +241,34 @@ class Form extends Component {
         credentials: 'include'
       }
     ).then( (response) => {
-      // HERE
+      return response.json();
     }).then( (parsed_json) => {
-      // HERE
+      return parsed_json['value'];
     });
+  }
+  submit = () => {
+    var promiseChain;
+
+    if (this.paymentMethod === 'credit-card') {
+      promiseChain = new Promise( (resolve, reject) => {
+
+      } );
+    } else {
+      promiseChain = new Promise( (resolve, reject) => {
+
+      } );
+
+    }
+
+
+    // switch on payment type
+    // if credit card, get token for card QBO API
+    // create bank account (from values) or credit card (from token) SUNBEAM API
+    //  PASS CUSTOMER OR CUSTOMER_ID OR SOMETHING WITH THIS TO ID WHO
+    // create recurring payment using ID of payment method SUNBEAM API
+
+    // CAN I USE PROMISES TO MAKE THIS MANAGEABLE?
+
 
 
 
@@ -343,19 +358,31 @@ class Customers extends Component {
       selectedCustomer: null
      };
     fetch(tuitionBlueprintBaseUrl + "/customers", {credentials: 'include'})
-      .then( (response) => {
-        return response.json()
-      }).then( (parsed_json) => {
+      .then( this.handleErrors )
+      .then( response => {
+          return response.json()
+      }).then( parsed_json => {
         this.setState({customers: parsed_json})
+      }).catch( error => {
+        console.log(error)
       });
+
     fetch(tuitionBlueprintBaseUrl + "/items", {credentials: 'include'})
+      .then( this.handleErrors )
       .then( (response) => {
         return response.json()
       }).then( (parsed_json) => {
         this.setState({items: parsed_json})
       });
   };
-  showForm = (index) => {
+  handleErrors = response => {
+    if (response.status === 401) {
+      window.location.href = tuitionBlueprintBaseUrl;
+    }
+    return response;
+  }
+
+  showForm = index => {
     this.setState({selectedCustomer: this.state.customers[index]});
     this.form.open();
   };

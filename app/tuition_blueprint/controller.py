@@ -1,4 +1,4 @@
-from flask import Blueprint, session, redirect, url_for, request
+from flask import Blueprint, session, redirect, url_for, request, Response
 import os
 import models
 from flask_cors import CORS, cross_origin
@@ -7,8 +7,19 @@ from app import db
 import json
 import re
 from flask import jsonify
+from functools import wraps
 
 blueprint = Blueprint(os.path.dirname(os.path.realpath(__file__)).split("/")[-1], __name__, template_folder='templates', static_folder='static')
+
+def requires_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('qbo_company_id', None):
+            return Response(response="{}", status=401, mimetype='application/json')
+        else:
+            return f(*args, **kwargs)
+
+    return decorated_function
 
 @blueprint.route('/')
 def index():
@@ -18,6 +29,7 @@ def index():
 
 @blueprint.route('/customers')
 @cross_origin(supports_credentials=True)
+@requires_auth
 def customers():
     success, value = models.Customer.customers_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
     if not success:
@@ -34,6 +46,7 @@ def parse_existing_id_from_error(s):
 
 @blueprint.route('/bank_account', methods=['POST'])
 @cross_origin(supports_credentials=True)
+@requires_auth
 def bank_account():
     qbo_client = QBO(session['qbo_company_id']).client()
     post = request.get_json()
@@ -63,6 +76,7 @@ def bank_account():
 
 @blueprint.route('/credit_card', methods=['POST'])
 @cross_origin(supports_credentials=True)
+@requires_auth
 def credit_card():
     qbo_client = QBO(session['qbo_company_id']).client()
     post = request.get_json()
@@ -89,6 +103,7 @@ def credit_card():
 
 @blueprint.route('/recurring_payments', methods=['POST'])
 @cross_origin(supports_credentials=True)
+@requires_auth
 def recurring_payments():
     post = request.get_json()
 
@@ -110,6 +125,7 @@ def recurring_payments():
 
 @blueprint.route('/recurring_payments/<int:recurring_payment_id>', methods=['DELETE'])
 @cross_origin(supports_credentials=True)
+@requires_auth
 def delete_recurring_payment(recurring_payment_id):
     recurring_payment = models.RecurringPayment.query.filter_by(company_id=session['qbo_company_id']).filter_by(id='recurring_payment_id').first()
     db.session.delete(recurring_payment)
@@ -118,6 +134,7 @@ def delete_recurring_payment(recurring_payment_id):
 
 @blueprint.route('/items')
 @cross_origin(supports_credentials=True)
+@requires_auth
 def items():
     success, value = models.Item.items_from_qbo(session['qbo_company_id'], QBO(session['qbo_company_id']).client())
     if not success:
