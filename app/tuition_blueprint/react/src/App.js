@@ -305,7 +305,7 @@ class Form extends Component {
       var endDate = new Date();
       endDate.setMonth(this.state.endDateMonth - 1);
       endDate.setDate(28);
-      endDate.setYear(this.state.endDateYear)
+      endDate.setFullYear("20" + this.state.endDateYear);
       endDate.setUTCHours(0,0,0,0);
 
       fetch(
@@ -402,8 +402,11 @@ class Form extends Component {
 class RecurringPayment extends Component {
   render() {
     if (this.props.recurringPayment) {
-      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter
-      return "TBD"
+      var item = this.props.items.filter( item => {
+          return item.id === this.props.recurringPayment.item_id
+      })[0]
+      var endDate = new Date(this.props.recurringPayment.end_date);
+      return item.name + ", $" + (this.props.recurringPayment.amount).toLocaleString() + "/month, through " + endDate.toLocaleString("en-us", { month: "long" }) + " of " + endDate.getFullYear();
     } else {
       return "None"
     }
@@ -418,23 +421,22 @@ class Customers extends Component {
       selectedCustomer: null
      };
 
+     fetch(tuitionBlueprintBaseUrl + "/items", {credentials: 'include'})
+       .then( this.handleErrors )
+       .then( (response) => {
+         return response.json()
+       }).then( (parsed_json) => {
+         this.setState({items: parsed_json})
+       });
+
     fetch(tuitionBlueprintBaseUrl + "/customers", {credentials: 'include'})
       .then( this.handleErrors )
       .then( response => {
           return response.json()
       }).then( parsed_json => {
-        console.log(parsed_json)
         this.setState({customers: parsed_json})
       }).catch( error => {
         console.log(error)
-      });
-
-    fetch(tuitionBlueprintBaseUrl + "/items", {credentials: 'include'})
-      .then( this.handleErrors )
-      .then( (response) => {
-        return response.json()
-      }).then( (parsed_json) => {
-        this.setState({items: parsed_json})
       });
   };
   handleErrors = response => {
@@ -471,10 +473,10 @@ class Customers extends Component {
                           {customer.name}
                         </TableCell>
                         <TableCell>
-                          <RecurringPayment recurringPayment={customer.recurring_payment} items={this.items}/>
+                          <RecurringPayment recurringPayment={customer.recurring_payment} items={this.state.items}/>
                         </TableCell>
                         <TableCell style={{textAlign: "center"}}>
-                          <IconButton color="accent" onClick={ () => this.showForm(index) } className="material-icons">{ customer.recurringPayment ? "delete" : "add_circle" }</IconButton>
+                          <IconButton color="accent" onClick={ () => this.showForm(index) } className="material-icons">{ customer.recurring_payment ? "delete" : "add_circle" }</IconButton>
                         </TableCell>
                       </TableRow>
                     )
