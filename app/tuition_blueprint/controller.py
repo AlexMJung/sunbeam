@@ -128,7 +128,7 @@ def recurring_payments():
 @cross_origin(supports_credentials=True)
 @requires_auth
 def delete_recurring_payment(recurring_payment_id):
-    recurring_payment = models.RecurringPayment.query.filter_by(company_id=session['qbo_company_id']).filter_by(id='recurring_payment_id').first()
+    recurring_payment = models.RecurringPayment.query.filter_by(company_id=session['qbo_company_id']).filter_by(id=recurring_payment_id).first()
     db.session.delete(recurring_payment)
     db.session.commit()
     return ('', 204)

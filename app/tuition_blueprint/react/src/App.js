@@ -134,7 +134,7 @@ class StatefulTextField extends Component {
   }
 }
 
-class Form extends Component {
+class AddForm extends Component {
   constructor(props) {
     super(props);
     this.componentsToValidate = [];
@@ -399,6 +399,62 @@ class Form extends Component {
   }
 }
 
+class DeleteForm extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      open: false,
+    };
+  };
+  requestClose = () => {
+    this.setState({open: false});
+  };
+  open = () => {
+    this.setState({ open: true });
+  };
+  handleErrors = response => {
+    if (response.status <= 200 && response.status < 300) {
+      return response
+    }
+    // TODO XXX SHOW ERROR UI
+    console.log(response)
+  }
+  delete = () => {
+    fetch(
+      tuitionBlueprintBaseUrl + "/recurring_payments/" + this.props.customer.recurring_payment.id,
+      {
+        credentials: 'include',
+        method: "DELETE",
+      }
+    ).then( this.handleErrors )
+  }
+  render() {
+    if (this.props.customer) {
+      return (
+        <div>
+          <Dialog open={this.state.open} onRequestClose={this.requestClose}>
+            <DialogTitle>Confirm Deletion </DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                Please confirm that you want to delete the recurring tuition payment for { this.props.customer.name }.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={this.requestClose} color="primary">
+                Cancel
+              </Button>
+              <Button onClick={this.delete} color="primary" >
+                Delete
+              </Button>
+          </DialogActions>
+          </Dialog>
+        </div>
+      )
+    }
+    return (null);
+  }
+}
+
 class RecurringPayment extends Component {
   render() {
     if (this.props.recurringPayment) {
@@ -445,15 +501,19 @@ class Customers extends Component {
     }
     return response;
   }
-
-  showForm = index => {
+  showAddForm = index => {
     this.setState({selectedCustomer: this.state.customers[index]});
-    this.form.open();
+    this.addForm.open();
   };
+  showDeleteForm = index => {
+    this.setState({selectedCustomer: this.state.customers[index]});
+    this.deleteForm.open();
+  }
   render() {
     return (
       <div className="Customers">
-        <Form ref={form => (this.form = form)} items={this.state.items} customer={this.state.selectedCustomer}/>
+        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer}/>
+        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer}/>
         <Paper>
           <Table>
             <TableHead>
@@ -476,7 +536,12 @@ class Customers extends Component {
                           <RecurringPayment recurringPayment={customer.recurring_payment} items={this.state.items}/>
                         </TableCell>
                         <TableCell style={{textAlign: "center"}}>
-                          <IconButton color="accent" onClick={ () => this.showForm(index) } className="material-icons">{ customer.recurring_payment ? "delete" : "add_circle" }</IconButton>
+                          { customer.recurring_payment &&
+                            <IconButton color="accent" onClick={ () => this.showDeleteForm(index) } className="material-icons">delete</IconButton>
+                          }
+                          { ! customer.recurring_payment &&
+                            <IconButton color="accent" onClick={ () => this.showAddForm(index) } className="material-icons">add_circle</IconButton>
+                          }
                         </TableCell>
                       </TableRow>
                     )
