@@ -16,6 +16,9 @@ import { FormControl, FormControlLabel } from 'material-ui/Form';
 import NumberFormat from 'react-number-format';
 import Radio, { RadioGroup } from 'material-ui/Radio';
 import { MuiThemeProvider, createMuiTheme } from 'material-ui/styles';
+import Snackbar from 'material-ui/Snackbar';
+import CloseIcon from 'material-ui-icons/Close';
+
 
 var tuitionBlueprintBaseUrl = "http://localhost:5000/tuition";
 var qboBaseUrl = "https://sandbox.api.intuit.com"
@@ -213,13 +216,6 @@ class AddForm extends Component {
   change = e => {
     this.setState({[e.target.name]: e.target.value});
   };
-  handleErrors = response => {
-    if (response.status <= 200 && response.status < 300) {
-      return response
-    }
-    // TODO XXX SHOW ERROR UI
-    console.log(response)
-  }
   submit = async () => {
     if (this.state.paymentMethod === 'credit-card') {
       var token = await fetch(
@@ -242,11 +238,11 @@ class AddForm extends Component {
           ),
           credentials: 'omit'
         }
-      ).then( response => {
+      ).then(response => {
         return response.json();
-      }).then( parsed_json => {
+      }).then(parsed_json => {
         return parsed_json['value'];
-      }).catch( error => {
+      }).catch(error => {
         console.log(error)
       });
 
@@ -264,10 +260,10 @@ class AddForm extends Component {
             token: token
           })
         }
-      ).then( this.handleErrors )
-      .then( response => {
+      ).then(this.props.handleAPIErrors)
+      .then(response => {
         return response.json();
-      }).then( parsed_json => {
+      }).then(parsed_json => {
         return parsed_json["id"]
       })
     } else if (this.state.paymentMethod === 'e-check') {
@@ -288,10 +284,10 @@ class AddForm extends Component {
             phone: this.state.checkingPhone.replace(/\s+/g, '')
           })
         }
-      ).then( this.handleErrors )
-      .then( response => {
+      ).then(this.props.handleAPIErrors)
+      .then(response => {
         return response.json();
-      }).then( parsed_json => {
+      }).then(parsed_json => {
         return parsed_json["id"]
       })
     }
@@ -327,7 +323,7 @@ class AddForm extends Component {
             end_date: endDate,
           })
         }
-      ).then( this.handleErrors )
+      ).then(this.props.handleAPIErrors)
     }
 
     // TODO XXX close at top, also update state to include new recurring payment
@@ -358,8 +354,8 @@ class AddForm extends Component {
               </Select>
             </FormControl>
             <NumberFormat validationParent={this} validators={[Validators.required, Validators.positiveAmount]} margin="dense" id="amount" decimalPrecision={2} label="Amount" customInput={ValidatedTextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.change} name="amount" fullWidth/>
-            <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={ {width: "48%", marginRight: "4%"} } format="##" />
-            <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={ {width: "48%"} }/>
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={{width: "48%", marginRight: "4%"}} format="##" />
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={{width: "48%"}}/>
             <FormControl margin="dense" fullWidth>
               <InputLabel shrink={true} htmlFor="amount">Payment Method</InputLabel><br/>
               <RadioGroup name="paymentMethod" value={this.state.paymentMethod} onChange={this.change}  style={{ display: 'inline' }}>
@@ -370,17 +366,17 @@ class AddForm extends Component {
             { this.state.paymentMethod === "credit-card" &&
               <div>
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardNumber]} margin="dense" fullWidth label="Credit Card Number" id="creditCardNumber" name="creditCardNumber" customInput={ValidatedTextField} value={this.state.creditCardNumber} onChange={this.change} format="#### #### #### ####" />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={ {width: "32%", marginRight: "2%" } }/>
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={ {width: "32%", marginRight: "2%" } }/>
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardSecurityCode]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={ {width: "32%" } }/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }}/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }}/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardSecurityCode]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={{width: "32%" }}/>
               </div>
             }
             { this.state.paymentMethod === "e-check" &&
               <div>
-                <ValidatedTextField validationParent={this} validators={[Validators.required, Validators.minimumLength(3)]} id="checkingName" name="checkingName" label="Name on Checking Account"  value={this.state.checkingName} onChange={this.change} style={ {width: "48%", marginRight: "4%" } } />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(10)]} id="checkingPhone" name="checkingPhone" label="Phone Number" customInput={ValidatedTextField} value={this.state.checkingPhone} onChange={this.change} format="### ### ####" style={ {width: "48%" } } />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(9)]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={ {width: "48%", marginRight: "4%" } }/>
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(5)]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={ {width: "48%"} }/>
+                <ValidatedTextField validationParent={this} validators={[Validators.required, Validators.minimumLength(3)]} id="checkingName" name="checkingName" label="Name on Checking Account"  value={this.state.checkingName} onChange={this.change} style={{width: "48%", marginRight: "4%" }} />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(10)]} id="checkingPhone" name="checkingPhone" label="Phone Number" customInput={ValidatedTextField} value={this.state.checkingPhone} onChange={this.change} format="### ### ####" style={{width: "48%" }} />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(9)]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={{width: "48%", marginRight: "4%" }}/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(5)]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={{width: "48%"}}/>
               </div>
             }
           </DialogContent>
@@ -412,13 +408,6 @@ class DeleteForm extends Component {
   open = () => {
     this.setState({ open: true });
   };
-  handleErrors = response => {
-    if (response.status <= 200 && response.status < 300) {
-      return response
-    }
-    // TODO XXX SHOW ERROR UI
-    console.log(response)
-  }
   delete = () => {
     fetch(
       tuitionBlueprintBaseUrl + "/recurring_payments/" + this.props.customer.recurring_payment.id,
@@ -426,7 +415,7 @@ class DeleteForm extends Component {
         credentials: 'include',
         method: "DELETE",
       }
-    ).then( this.handleErrors )
+    ).then(this.props.handleAPIErrors)
   }
   render() {
     if (this.props.customer) {
@@ -455,10 +444,30 @@ class DeleteForm extends Component {
   }
 }
 
+class APIErrorSnackbar extends Component {
+  state = {
+    open: false,
+  };
+  open = () => {
+    this.setState({open: true});
+  }
+  render() {
+    return (
+      <Snackbar
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left',}}
+        open={this.state.open}
+        onRequestClose={this.requestClose}
+        message={<span id="message-id">API Error: {this.props.error} <a href={"mailto:support@wildflowerschools.org?subject=Tuition utility API error&body=%0A%0AAPI Details: " + this.props.error} style={{color: "white"}}>submit support request</a></span>}
+        action={[<IconButton key="close" color="inherit" onClick={this.handleRequestClose}><CloseIcon /></IconButton>]}
+      />
+    )
+  }
+}
+
 class RecurringPayment extends Component {
   render() {
     if (this.props.recurringPayment) {
-      var item = this.props.items.filter( item => {
+      var item = this.props.items.filter(item => {
           return item.id === this.props.recurringPayment.item_id
       })[0]
       var endDate = new Date(this.props.recurringPayment.end_date);
@@ -474,32 +483,53 @@ class Customers extends Component {
     super(props);
     this.state = {
       customers: [],
-      selectedCustomer: null
+      selectedCustomer: null,
+      apiError: ""
      };
 
-     fetch(tuitionBlueprintBaseUrl + "/items", {credentials: 'include'})
-       .then( this.handleErrors )
-       .then( (response) => {
-         return response.json()
-       }).then( (parsed_json) => {
-         this.setState({items: parsed_json})
+     var itemsUrl = tuitionBlueprintBaseUrl + "/items";
+     var itemsParams = {credentials: 'include'};
+     fetch(itemsUrl, itemsParams)
+       .then(response => this.handleAPIErrors({url: itemsUrl, params: itemsParams, response: response}))
+       .then(response => {
+         return response.json();
+       }).then(parsed_json => {
+         this.setState({items: parsed_json});
+       }).catch(error => {
+         if (error.message !== "handleAPIErrors") {
+           this.handleAPIErrors({url: itemsUrl, params: itemsParams, error: error})
+         }
        });
 
-    fetch(tuitionBlueprintBaseUrl + "/customers", {credentials: 'include'})
-      .then( this.handleErrors )
-      .then( response => {
-          return response.json()
-      }).then( parsed_json => {
-        this.setState({customers: parsed_json})
-      }).catch( error => {
-        console.log(error)
+    var customersUrl = tuitionBlueprintBaseUrl + "/customers";
+    var customersParams = {credentials: 'include'};
+    fetch(customersUrl, customersParams)
+      .then(response => this.handleAPIErrors({url: customersUrl, params: customersParams, response: response}))
+      .then(response => {
+          return response.json();
+      }).then(parsed_json => {
+        this.setState({customers: parsed_json});
+      }).catch(error => {
+        if (error.message !== "handleAPIErrors") {
+          this.handleAPIErrors({url: customersUrl, params: customersParams, error: error});
+        }
       });
   };
-  handleErrors = response => {
-    if (response.status === 401) {
+  handleAPIErrors = ({url, params, response, error}={}) => {
+    if (error) {
+      this.setState({apiError: error.message + " (" + url + " " + JSON.stringify(params) + ")" });
+      this.apiErrorSnackbar.open();
+    } else if (response.status <= 200 && response.status < 300) {
+      return response
+    } else if (response.status === 401) {
       window.location.href = tuitionBlueprintBaseUrl;
+    } else {
+      response.text().then(text  => {
+        this.setState({apiError: " Unexpected results (" + url + " " + JSON.stringify(params) + " " + text + ")" });
+        this.apiErrorSnackbar.open();
+      });
+      throw Error("handleAPIErrors");
     }
-    return response;
   }
   showAddForm = index => {
     this.setState({selectedCustomer: this.state.customers[index]});
@@ -512,8 +542,9 @@ class Customers extends Component {
   render() {
     return (
       <div className="Customers">
-        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer}/>
-        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer}/>
+        <APIErrorSnackbar ref={apiErrorSnackbar => (this.apiErrorSnackbar = apiErrorSnackbar)} error={this.state.apiError}/>
+        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors}/>
+        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors}/>
         <Paper>
           <Table>
             <TableHead>
@@ -611,7 +642,6 @@ const theme = createMuiTheme({
     }
   },
 });
-
 
 class App extends Component {
   render() {
