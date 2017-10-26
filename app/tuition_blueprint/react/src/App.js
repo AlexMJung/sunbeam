@@ -15,6 +15,7 @@ import Input, { InputLabel } from 'material-ui/Input';
 import { FormControl, FormControlLabel } from 'material-ui/Form';
 import NumberFormat from 'react-number-format';
 import Radio, { RadioGroup } from 'material-ui/Radio';
+import { MuiThemeProvider, createMuiTheme } from 'material-ui/styles';
 
 var tuitionBlueprintBaseUrl = "http://localhost:5000/tuition";
 var qboBaseUrl = "https://sandbox.api.intuit.com"
@@ -206,7 +207,7 @@ class Form extends Component {
   };
   item = e => {
     this.setState({ itemId: e.target.value });
-    this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price });
+    this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price.toString() });
 
   };
   change = e => {
@@ -293,9 +294,44 @@ class Form extends Component {
       }).then( parsed_json => {
         return parsed_json["id"]
       })
-
-      console.log("bankAccountId " + bankAccountId);
     }
+
+    if (creditCardId || bankAccountId) {
+      var startDate = new Date();
+      startDate.setDate(1);
+      startDate.setMonth(startDate.getMonth() + 1);
+      startDate.setUTCHours(0,0,0,0);
+
+      var endDate = new Date();
+      endDate.setMonth(this.state.endDateMonth - 1);
+      endDate.setDate(28);
+      endDate.setYear(this.state.endDateYear)
+      endDate.setUTCHours(0,0,0,0);
+
+      fetch(
+        tuitionBlueprintBaseUrl + "/recurring_payments",
+        {
+          credentials: 'include',
+          method: "POST",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customer_id: this.props.customer.id,
+            bank_account_id: bankAccountId,
+            credit_card_id: creditCardId,
+            item_id: this.state.itemId,
+            amount: this.state.amount.replace(/^\$/g,''),
+            start_date: startDate,
+            end_date: endDate,
+          })
+        }
+      ).then( this.handleErrors )
+    }
+
+    // TODO XXX close at top, also update state to include new recurring payment
+
   };
   render() {
     if (this.props.customer && this.props.items) {
@@ -387,6 +423,7 @@ class Customers extends Component {
       .then( response => {
           return response.json()
       }).then( parsed_json => {
+        console.log(parsed_json)
         this.setState({customers: parsed_json})
       }).catch( error => {
         console.log(error)
@@ -437,7 +474,7 @@ class Customers extends Component {
                           <RecurringPayment recurringPayment={customer.recurring_payment} items={this.items}/>
                         </TableCell>
                         <TableCell style={{textAlign: "center"}}>
-                          <IconButton onClick={ () => this.showForm(index) } className="material-icons">{ customer.recurringPayment ? "delete" : "add_circle" }</IconButton>
+                          <IconButton color="accent" onClick={ () => this.showForm(index) } className="material-icons">{ customer.recurringPayment ? "delete" : "add_circle" }</IconButton>
                         </TableCell>
                       </TableRow>
                     )
@@ -452,19 +489,78 @@ class Customers extends Component {
   }
 }
 
+const theme = createMuiTheme({
+  palette: {
+    primary: {
+      '50': '#e0f4f3',
+      '100': '#b3e4e1',
+      '200': '#80d3ce',
+      '300': '#4dc1ba',
+      '400': '#26b3ab',
+      '500': '#00a69c',
+      '600': '#009e94',
+      '700': '#00958a',
+      '800': '#008b80',
+      '900': '#007b6e',
+      'A100': '#b3e4e1',
+      'A200': '#80d3ce',
+      'A400': '#26b3ab',
+      'A700': '#00958a',
+      contrastDefaultColor: 'light'
+    },
+    secondary: {
+      '50': '#e3eeee',
+      '100': '#b8d4d4',
+      '200': '#89b8b8',
+      '300': '#5a9b9b',
+      '400': '#368585',
+      '500': '#137070',
+      '600': '#116868',
+      '700': '#0e5d5d',
+      '800': '#0b5353',
+      '900': '#064141',
+      'A100': '#B8D4D4',
+      'A200': '#89B8B8',
+      'A400': '#368585',
+      'A700': '#0E5D5D',
+      contrastDefaultColor: 'light'
+    },
+    error: {
+      '50': '#fdede5',
+      '100': '#fbd3bd',
+      '200': '#f9b691',
+      '300': '#f69865',
+      '400': '#f48244',
+      '500': '#f26c23',
+      '600': '#f0641f',
+      '700': '#ee591a',
+      '800': '#ec4f15',
+      '900': '#e83d0c',
+      'A100': '#FBD3BD',
+      'A200': '#F9B691',
+      'A400': '#F48244',
+      'A700': '#EE591A',
+      contrastDefaultColor: 'light'
+    }
+  },
+});
+
+
 class App extends Component {
   render() {
     return (
-      <div className="App">
-        <AppBar position="static" color="default">
-          <Toolbar>
-            <Typography type="title" color="inherit">
-              Wildflower Tuition Utility
-            </Typography>
-          </Toolbar>
-        </AppBar>
-        <Customers/>
-      </div>
+      <MuiThemeProvider theme={theme}>
+        <div className="App">
+          <AppBar position="static">
+            <Toolbar>
+              <Typography type="title" color="inherit">
+                Wildflower Tuition Utility
+              </Typography>
+            </Toolbar>
+          </AppBar>
+          <Customers/>
+        </div>
+      </MuiThemeProvider>
     );
   }
 }

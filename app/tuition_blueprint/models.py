@@ -227,9 +227,9 @@ class RecurringPayment(ORMBase):
             }
 
         if self.amount:
-            data['amount'] = str(Decimal(self.amount).quantize(Decimal('.01'))) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
+            data['amount'] = Decimal(self.amount).quantize(Decimal('.01')) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
         else:
-            data['amount'] = str(Decimal(item.price).quantize(Decimal('.01'))) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
+            data['amount'] = Decimal(item.price).quantize(Decimal('.01')) # https://stackoverflow.com/questions/3221654/specifying-number-of-decimal-places-in-python
 
         response = qbo_client.post(
             url,
@@ -296,7 +296,7 @@ class Customer(Repr):
         response = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer%20maxresults%201000&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
         if response.status_code != 200:
             return (False, response.text)
-        return (True, [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=c['Id']).first()) for c in response.json()['QueryResponse']['Customer']])
+        return (True, [Customer(id=c['Id'], email=c.get('PrimaryEmailAddr', {"Address": None})['Address'], name=c['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=str(company_id), customer_id=c['Id']).first()) for c in response.json()['QueryResponse']['Customer']])
 
     @classmethod
     def customer_from_qbo(cls, company_id, customer_id, qbo_client):
@@ -304,7 +304,7 @@ class Customer(Repr):
         if response.status_code != 200:
             return (False, response.text)
         response_data = response.json()["Customer"]
-        return (True, Customer(id=response_data['Id'], email=response_data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=response_data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=response_data['Id']).first()))
+        return (True, Customer(id=response_data['Id'], email=response_data.get('PrimaryEmailAddr', {"Address": None})['Address'], name=response_data['DisplayName'], recurring_payment=RecurringPayment.query.filter_by(company_id=str(company_id), customer_id=response_data['Id']).first()))
 
 class CustomerSchema(ma.Schema):
     class Meta:

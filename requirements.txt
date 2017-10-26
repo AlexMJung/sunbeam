@@ -17,3 +17,4 @@ nltk
 boto3
 google-api-python-client
 requests_oauthlib
+simplejson

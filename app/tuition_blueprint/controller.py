@@ -108,11 +108,11 @@ def credit_card():
 def recurring_payments():
     post = request.get_json()
 
-    recurring_payment = RecurringPayment(
+    recurring_payment = models.RecurringPayment(
         company_id = session['qbo_company_id'],
         customer_id = post['customer_id'],
-        bank_account_id = post['bank_account_id'],
-        credit_card_id = post['credit_card_id'],
+        bank_account_id = post.get('bank_account_id', None),
+        credit_card_id = post.get('credit_card_id', None),
         item_id = post['item_id'],
         amount = post['amount'],
         start_date = post['start_date'],
