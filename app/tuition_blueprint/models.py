@@ -406,7 +406,7 @@ class Cron(object):
             message = {
                 "subject": "Tuition payment for {0} declined".format(customer.name),
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
-                "recipients": [customer.email],
+                "recipients": customer.email.split(","), # intuit comma separates email addresses
                 "cc": [company.email],
                 "bcc": ['dan.grigsby@wildflowerschools.org'],
                 "html": render_template("failed_email.html", customer=customer)
