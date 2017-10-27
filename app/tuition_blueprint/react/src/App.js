@@ -50,7 +50,7 @@ class Validators {
   }
 
   static positiveAmount = value => {
-    var n = Number(value.replace(/^\$/, ""));
+    var n = Number(value.replace(/^\$|,/g, ""));
     if (n > 0) {
       return true;
     }
@@ -158,12 +158,13 @@ class AddForm extends Component {
       checkingPhone: "",
       valid: false
     };
-    this.baseState = this.state
   };
   componentWillReceiveProps(nextProps) {
     if (nextProps.items && this.state.itemId === "") {
-      this.setState({ itemId: nextProps.items[0].id });
-      this.setState({ amount: nextProps.items[0].price.toFixed(2) });
+      this.setState({
+        itemId: nextProps.items[0].id,
+        amount: nextProps.items[0].price.toFixed(2)
+      });
     }
   };
   registerComponentForValidation = (component) => {
@@ -202,15 +203,17 @@ class AddForm extends Component {
       }
     }
   };
-  requestClose = () => this.setState(this.baseState);
+  requestClose = () => this.setState({ open: false});
   open = () => this.setState({ open: true });
   item = e => {
-    this.setState({ itemId: e.target.value });
-    this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price.toString() });
-
+    this.setState({
+      itemId: e.target.value,
+      amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price.toString()
+    });
   };
   change = e => this.setState({[e.target.name]: e.target.value});
   submit = async () => {
+    this.requestClose();
     if (this.state.paymentMethod === 'credit-card') {
       var tokenUrl = qboBaseUrl + "/quickbooks/v4/payments/tokens";
       var tokenParams = {
@@ -223,7 +226,7 @@ class AddForm extends Component {
           {
             "card": {
               expYear: "20" + this.state.creditCardExpirationYear,
-              expMonth: this.state.creditCardExpirationMonth,
+              expMonth: this.state.creditCardExpirationMonth.padStart(2, "0"),
               number: this.state.creditCardNumber.replace(/\s+/g, ''),
               cvc: this.state.creditCardSecurityCode
             }
@@ -236,25 +239,26 @@ class AddForm extends Component {
         .then(response => response.json())
         .then(parsed_json => parsed_json['value'])
         .catch(error => this.props.handleAPIErrors({url: tokenUrl, params: tokenParams, error: error}));
-
-      var creditCardUrl = tuitionBlueprintBaseUrl + "/credit_card";
-      var creditCardParams = {
-        credentials: 'include',
-        method: "POST",
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customer_id: this.props.customer.id,
-          token: token
-        })
-      };
-      var creditCardId = await fetch(creditCardUrl, creditCardParams)
-        .then(response => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, response: response}))
-        .then(response => response.json())
-        .then(parsed_json => parsed_json["id"])
-        .catch(error => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, error: error}));
+      if (token) {
+        var creditCardUrl = tuitionBlueprintBaseUrl + "/credit_card";
+        var creditCardParams = {
+          credentials: 'include',
+          method: "POST",
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            customer_id: this.props.customer.id,
+            token: token
+          })
+        };
+        var creditCardId = await fetch(creditCardUrl, creditCardParams)
+          .then(response => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, response: response}))
+          .then(response => response.json())
+          .then(parsed_json => parsed_json["id"])
+          .catch(error => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, error: error}));
+      }
     } else if (this.state.paymentMethod === 'e-check') {
       var bankAccountUrl = tuitionBlueprintBaseUrl + "/bank_account";
       var bankAccountParams = {
@@ -309,13 +313,12 @@ class AddForm extends Component {
           end_date: endDate,
         })
       }
-      fetch(recurringPaymentsUrl, recurringPaymentsParams)
+      var recurringPayment = fetch(recurringPaymentsUrl, recurringPaymentsParams)
         .then(response => this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, response: response}))
+        .then(response => response.json())
         .catch(error => this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, error: error}));
     }
-
-    // TODO XXX close at top, also update state to include new recurring payment
-
+    this.props.addRecurringPaymentForSelectedCustomerFunction(recurringPayment);
   };
   render() {
     if (this.props.customer && this.props.items) {
@@ -393,11 +396,16 @@ class DeleteForm extends Component {
   requestClose = () => this.setState({open: false});
   open = () => this.setState({ open: true });
   delete = () => {
+    this.requestClose();
     var deleteRecurringPaymentUrl = tuitionBlueprintBaseUrl + "/recurring_payments/" + this.props.customer.recurring_payment.id;
-    var deleteRecurringPaymentParams =
+    var deleteRecurringPaymentParams = {
+      credentials: 'include',
+      method: "DELETE",
+    }
     fetch(deleteRecurringPaymentUrl, deleteRecurringPaymentParams)
       .then(response => this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, response: response}))
       .catch(error => this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, error: error}));
+    this.props.deleteRecurringPaymentForSelectedCustomerFunction();
   }
   render() {
     if (this.props.customer) {
@@ -488,7 +496,7 @@ class Customers extends Component {
         this.setState({apiError: error.message + " (" + url + " " + JSON.stringify(params) + ")" });
         this.apiErrorSnackbar.open();
       }
-    } else if (response.status <= 200 && response.status < 300) {
+    } else if (response.status >= 200 && response.status < 300) {
       return response
     } else if (response.status === 401) {
       window.location.href = tuitionBlueprintBaseUrl;
@@ -504,16 +512,31 @@ class Customers extends Component {
     this.setState({selectedCustomer: this.state.customers[index]});
     this.addForm.open();
   };
+  addRecurringPaymentForSelectedCustomer = recurring_payment => {
+    // XXX TODO DO I NEED TO DO AS THEN?
+    recurring_payment.then((recurring_payment) => {
+      var customers = this.state.customers;
+      var index = customers.findIndex(customer => customer.id === this.state.selectedCustomer.id);
+      customers[index].recurring_payment = recurring_payment;
+      this.setState({customers: customers});
+    });
+  }
   showDeleteForm = index => {
     this.setState({selectedCustomer: this.state.customers[index]});
     this.deleteForm.open();
+  }
+  deleteRecurringPaymentForSelectedCustomer = () => {
+    var customers = this.state.customers;
+    var index = customers.findIndex(customer => customer.id === this.state.selectedCustomer.id);
+    customers[index].recurring_payment = null;
+    this.setState({customers: customers});
   }
   render() {
     return (
       <div className="Customers">
         <APIErrorSnackbar ref={apiErrorSnackbar => (this.apiErrorSnackbar = apiErrorSnackbar)} error={this.state.apiError}/>
-        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors}/>
-        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors}/>
+        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors} addRecurringPaymentForSelectedCustomerFunction={this.addRecurringPaymentForSelectedCustomer}/>
+        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors} deleteRecurringPaymentForSelectedCustomerFunction={this.deleteRecurringPaymentForSelectedCustomer}/>
         <Paper>
           <Table>
             <TableHead>
@@ -537,10 +560,10 @@ class Customers extends Component {
                         </TableCell>
                         <TableCell style={{textAlign: "center"}}>
                           { customer.recurring_payment &&
-                            <IconButton color="accent" onClick={ () => this.showDeleteForm(index) } className="material-icons">delete</IconButton>
+                            <IconButton color="accent" onClick={ () => this.showDeleteForm(index) } className="material-icons">remove_circle_outline</IconButton>
                           }
                           { ! customer.recurring_payment &&
-                            <IconButton color="accent" onClick={ () => this.showAddForm(index) } className="material-icons">add_circle</IconButton>
+                            <IconButton color="accent" onClick={ () => this.showAddForm(index) } className="material-icons">add_circle_outline</IconButton>
                           }
                         </TableCell>
                       </TableRow>

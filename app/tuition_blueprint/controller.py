@@ -122,7 +122,7 @@ def recurring_payments():
     db.session.add(recurring_payment)
     db.session.commit()
 
-    return ('', 204)
+    return models.RecurringPaymentSchema().jsonify(recurring_payment)
 
 @blueprint.route('/recurring_payments/<int:recurring_payment_id>', methods=['DELETE'])
 @cross_origin(supports_credentials=True)
