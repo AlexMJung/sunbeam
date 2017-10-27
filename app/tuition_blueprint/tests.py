@@ -316,3 +316,16 @@ class TestCase(unittest.TestCase):
             for recurring_payment in models.RecurringPayment.query.all():
                 db.session.delete(recurring_payment)
             db.session.commit()
+
+
+    def test_cron_send_invoice(self):
+        with app.test_request_context():
+            success, company = models.Company.company_from_qbo(TestCase.company_id, TestCase.qbo_accounting_client)
+            recurring_payment = models.RecurringPayment(
+                company_id = TestCase.company_id,
+                customer_id = TestCase.customer.id,
+                bank_account_id = TestCase.bank_account.id,
+                item_id = TestCase.item.id,
+                amount = TestCase.item.price
+            )
+            models.Cron.send_invoice(company, recurring_payment, TestCase.qbo_accounting_client)

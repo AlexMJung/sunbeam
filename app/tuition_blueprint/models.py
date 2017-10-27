@@ -125,7 +125,6 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
                 return (False, response.text)
             return (True, None)
 
-
 class Invoice(InvoiceOrSalesReceipt):
     def __init__(self, id=None, recurring_payment=None, qbo_client=None):
         super(Invoice, self).__init__(id=id, recurring_payment=recurring_payment, qbo_client=qbo_client)
@@ -281,7 +280,7 @@ class Company(Repr):
         if response.status_code != 200:
             return (False, reponse.text)
         data = response.json()["CompanyInfo"]
-        return (True, Customer(email=data.get('Email', {"Address": None})['Address']))
+        return (True, Company(email=data.get('Email', {"Address": None})['Address']))
 
 # can use QBOAccountingModel as base class if ever need to save
 class Customer(Repr):
@@ -392,7 +391,9 @@ class Cron(object):
 
         invoice = Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
         success, value = invoice.save()
-        if not success:
+        if success:
+            invoice.id = value
+        else:
             message = {
                 "subject": "Tuition utility - send_invoice failed to save invoice",
                 "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
@@ -412,7 +413,16 @@ class Cron(object):
                 "html": render_template("failed_email.html", customer=customer)
             }
             mail.send(Message(**message))
-            invoice.send()
+            success, value = invoice.send()
+            if not success:
+                message = {
+                    "subject": "Tuition utility - send_invoice failed to send invoice",
+                    "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
+                    "recipients": ["dan.grigsby@wildflowerschools.org"],
+                    "body": "{0}\n\n{1}".format(value, invoice)
+                }
+                mail.send(Message(**message))
+                return
         else:
             mail.send(
                 Message(
