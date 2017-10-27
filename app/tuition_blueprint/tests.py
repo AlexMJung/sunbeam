@@ -317,7 +317,6 @@ class TestCase(unittest.TestCase):
                 db.session.delete(recurring_payment)
             db.session.commit()
 
-
     def test_cron_send_invoice(self):
         with app.test_request_context():
             success, company = models.Company.company_from_qbo(TestCase.company_id, TestCase.qbo_accounting_client)

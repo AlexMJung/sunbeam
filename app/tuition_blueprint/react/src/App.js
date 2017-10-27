@@ -335,7 +335,7 @@ class AddForm extends Component {
             <DialogContentText>
               All of the fields on this form are required:
             </DialogContentText>
-            <TextField margin="dense" disabled={true} id="name" label="Name" value={this.props.customer.name} fullWidth />
+            <TextField margin="dense" disabled id="name" label="Name" value={this.props.customer.name} fullWidth />
             <FormControl margin="dense" fullWidth>
               <InputLabel htmlFor="item-id">Item</InputLabel>
               <Select onChange={this.item} value={this.state.itemId} input={<Input id="item-id" fullWidth />}>
@@ -350,14 +350,14 @@ class AddForm extends Component {
                 }
               </Select>
             </FormControl>
-            <NumberFormat validationParent={this} validators={[Validators.required, Validators.positiveAmount]} margin="dense" id="amount" decimalPrecision={2} label="Amount" customInput={ValidatedTextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.change} name="amount" fullWidth/>
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.positiveAmount]} margin="dense" id="amount" decimalPrecision={2} label="Amount" customInput={ValidatedTextField} value={this.state.amount} thousandSeparator prefix={'$'} onChange={this.change} name="amount" fullWidth />
             <Typography type="caption" style={{marginTop: "20px"}}>
               Payment will begin on the first of next month.
             </Typography>
             <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={{width: "48%", marginRight: "4%"}} format="##" />
-            <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={{width: "48%"}}/>
+            <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={{width: "48%"}} />
             <FormControl margin="dense" fullWidth>
-              <InputLabel shrink={true} htmlFor="amount">Payment Method</InputLabel><br/>
+              <InputLabel shrink htmlFor="amount">Payment Method</InputLabel><br />
               <RadioGroup name="paymentMethod" value={this.state.paymentMethod} onChange={this.change}  style={{ display: 'inline' }}>
                 <FormControlLabel value="credit-card" control={<Radio />} label="Credit card" />
                 <FormControlLabel value="e-check" control={<Radio />} label="E-check" />
@@ -366,17 +366,17 @@ class AddForm extends Component {
             { this.state.paymentMethod === "credit-card" &&
               <div>
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardNumber]} margin="dense" fullWidth label="Credit Card Number" id="creditCardNumber" name="creditCardNumber" customInput={ValidatedTextField} value={this.state.creditCardNumber} onChange={this.change} format="#### #### #### ####" />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }}/>
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }}/>
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardSecurityCode]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={{width: "32%" }}/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }} />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }} />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardSecurityCode]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={{width: "32%" }} />
               </div>
             }
             { this.state.paymentMethod === "e-check" &&
               <div>
                 <ValidatedTextField validationParent={this} validators={[Validators.required, Validators.minimumLength(3)]} id="checkingName" name="checkingName" label="Name on Checking Account"  value={this.state.checkingName} onChange={this.change} style={{width: "48%", marginRight: "4%" }} />
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(10)]} id="checkingPhone" name="checkingPhone" label="Phone Number" customInput={ValidatedTextField} value={this.state.checkingPhone} onChange={this.change} format="### ### ####" style={{width: "48%" }} />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(9)]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={{width: "48%", marginRight: "4%" }}/>
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(5)]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={{width: "48%"}}/>
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(9)]} id="checkingRoutingNumber" name="checkingRoutingNumber" label="Routing Number" customInput={ValidatedTextField} value={this.state.checkingRoutingNumber} onChange={this.change} format="#########" style={{width: "48%", marginRight: "4%" }} />
+                <NumberFormat validationParent={this} validators={[Validators.required, Validators.minimumLength(5)]} id="checkingAccountNumber" name="checkingAccountNumber" label="Checking Account Number" customInput={ValidatedTextField} value={this.state.checkingAccountNumber} onChange={this.change} style={{width: "48%"}} />
               </div>
             }
           </DialogContent>
@@ -543,9 +543,9 @@ class Customers extends Component {
   render() {
     return (
       <div className="Customers">
-        <APIErrorSnackbar ref={apiErrorSnackbar => (this.apiErrorSnackbar = apiErrorSnackbar)} error={this.state.apiError}/>
-        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors} addRecurringPaymentForSelectedCustomerFunction={this.addRecurringPaymentForSelectedCustomer}/>
-        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors} deleteRecurringPaymentForSelectedCustomerFunction={this.deleteRecurringPaymentForSelectedCustomer}/>
+        <APIErrorSnackbar ref={apiErrorSnackbar => (this.apiErrorSnackbar = apiErrorSnackbar)} error={this.state.apiError} />
+        <AddForm ref={addForm => (this.addForm = addForm)} items={this.state.items} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors} addRecurringPaymentForSelectedCustomerFunction={this.addRecurringPaymentForSelectedCustomer} />
+        <DeleteForm ref={deleteForm => (this.deleteForm = deleteForm)} customer={this.state.selectedCustomer} handleAPIErrors={this.handleAPIErrors} deleteRecurringPaymentForSelectedCustomerFunction={this.deleteRecurringPaymentForSelectedCustomer} />
         <Paper>
           <Table>
             <TableHead>
@@ -565,7 +565,7 @@ class Customers extends Component {
                           {customer.name}
                         </TableCell>
                         <TableCell>
-                          <RecurringPayment recurringPayment={customer.recurring_payment} items={this.state.items}/>
+                          <RecurringPayment recurringPayment={customer.recurring_payment} items={this.state.items} />
                         </TableCell>
                         <TableCell style={{textAlign: "center"}}>
                           { customer.recurring_payment &&
@@ -654,10 +654,10 @@ class App extends Component {
               <Typography type="title" color="inherit">
                 Wildflower Tuition Utility
               </Typography>
-              <img src="logo.png" alt="logo" style={{marginLeft: "auto", height: "40px"}}/>
+              <img src="logo.png" alt="logo" style={{marginLeft: "auto", height: "40px"}} />
             </Toolbar>
           </AppBar>
-          <Customers/>
+          <Customers />
         </div>
       </MuiThemeProvider>
 
