@@ -102,11 +102,13 @@ class ValidatedTextField extends Component {
     super(props);
     this.lastValue = null;
   }
+
   registerComponentForValidation = ref => {
     if (ref) { // ignore when called with null; see https://github.com/facebook/react/issues/9328
       this.validationParent.registerComponentForValidation(ref)
     }
-  };
+  }
+
   componentDidUpdate() {
     // this creates a state change, which causes componentDidUpdate to be called again
     // so, only validate if the value changed
@@ -116,9 +118,11 @@ class ValidatedTextField extends Component {
       this.validationParent.validate();
     }
   }
+
   componentWillUnmount() {
     this.validationParent.unRegisterComponentForValidation(this)
-  };
+  }
+
   render() {
     const { validationParent, ...props} = this.props;
     this.validationParent = validationParent;
@@ -126,7 +130,7 @@ class ValidatedTextField extends Component {
     return (
       <StatefulTextField ref={this.registerComponentForValidation} valid={valid.toString()} error={ this.props.value !== "" && ! valid } {...props} />
     )
-  };
+  }
 }
 
 class StatefulTextField extends Component {
@@ -159,7 +163,8 @@ class AddForm extends Component {
       valid: false
     };
     this.baseState = this.state
-  };
+  }
+
   componentWillReceiveProps(nextProps) {
     if (nextProps.items && this.state.itemId === "") {
       this.baseState.itemId = nextProps.items[0].id
@@ -169,11 +174,13 @@ class AddForm extends Component {
         amount: nextProps.items[0].price.toFixed(2)
       });
     }
-  };
+  }
+
   registerComponentForValidation = (component) => {
     // console.log("Register: " + component.props.id);
     this.componentsToValidate.push(component)
   }
+
   validate = () => {
     for (var i = 0; i < this.componentsToValidate.length; i++) {
       if (this.componentsToValidate[i].props.valid === "false") {
@@ -183,7 +190,8 @@ class AddForm extends Component {
       }
     }
     this.setState({ valid: true });
-  };
+  }
+
   validateComponent = component => {
     var validators = component.props.validators
     if (! Array.isArray(validators)) {
@@ -197,6 +205,7 @@ class AddForm extends Component {
     }
     return true;
   }
+
   unRegisterComponentForValidation = component => {
     for (var i = 0; i < this.componentsToValidate.length; i++) {
       if (this.componentsToValidate[i].props.id === component.props.id) {
@@ -205,19 +214,24 @@ class AddForm extends Component {
           return;
       }
     }
-  };
+  }
+
   requestClose = () => this.setState({ open: false});
+
   open = () => {
     this.setState(this.baseState);
     this.setState({ open: true });
-  };
+  }
+
   item = e => {
     this.setState({
       itemId: e.target.value,
       amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price.toString()
     });
-  };
+  }
+
   change = e => this.setState({[e.target.name]: e.target.value});
+
   submit = async () => {
     this.requestClose();
     if (this.state.paymentMethod === 'credit-card') {
@@ -325,7 +339,8 @@ class AddForm extends Component {
         .catch(error => this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, error: error}));
     }
     this.props.addRecurringPaymentForSelectedCustomerFunction(recurringPayment);
-  };
+  }
+
   render() {
     if (this.props.customer && this.props.items) {
       return (
@@ -401,9 +416,12 @@ class DeleteForm extends Component {
     this.state = {
       open: false,
     };
-  };
+  }
+
   requestClose = () => this.setState({open: false});
+
   open = () => this.setState({ open: true });
+
   delete = () => {
     this.requestClose();
     var deleteRecurringPaymentUrl = tuitionBlueprintBaseUrl + "/recurring_payments/" + this.props.customer.recurring_payment.id;
@@ -416,6 +434,7 @@ class DeleteForm extends Component {
       .catch(error => this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, error: error}));
     this.props.deleteRecurringPaymentForSelectedCustomerFunction();
   }
+
   render() {
     if (this.props.customer) {
       return (
@@ -447,8 +466,11 @@ class APIErrorSnackbar extends Component {
   state = {
     open: false,
   };
+
   open = () => this.setState({open: true});
+
   handleRequestClose = () => this.setState({open: false});
+
   render() {
     return (
       <Snackbar
@@ -498,7 +520,7 @@ class Customers extends Component {
       .then(response => response.json())
       .then(parsed_json => this.setState({customers: parsed_json}))
       .catch(error => this.handleAPIErrors({url: customersUrl, params: customersParams, error: error}));
-  };
+  }
   handleAPIErrors = ({url, params, response, error}={}) => {
     if (error) {
       if (error.message !== "handleAPIErrors") {
@@ -517,12 +539,13 @@ class Customers extends Component {
       throw Error("handleAPIErrors");
     }
   }
+
   showAddForm = index => {
     this.setState({selectedCustomer: this.state.customers[index]});
     this.addForm.open();
-  };
+  }
+
   addRecurringPaymentForSelectedCustomer = recurring_payment => {
-    // XXX TODO DO I NEED TO DO AS THEN?
     recurring_payment.then((recurring_payment) => {
       var customers = this.state.customers;
       var index = customers.findIndex(customer => customer.id === this.state.selectedCustomer.id);
@@ -530,16 +553,19 @@ class Customers extends Component {
       this.setState({customers: customers});
     });
   }
+
   showDeleteForm = index => {
     this.setState({selectedCustomer: this.state.customers[index]});
     this.deleteForm.open();
   }
+
   deleteRecurringPaymentForSelectedCustomer = () => {
     var customers = this.state.customers;
     var index = customers.findIndex(customer => customer.id === this.state.selectedCustomer.id);
     customers[index].recurring_payment = null;
     this.setState({customers: customers});
   }
+
   render() {
     return (
       <div className="Customers">
