@@ -239,15 +239,9 @@ class AddForm extends Component {
       };
       var token = await fetch(tokenUrl,tokenParams)
         .then(response => this.props.handleAPIErrors({url: tokenUrl, params: tokenParams, response: response}))
-        .then(response => {
-          return response.json();
-        }).then(parsed_json => {
-          return parsed_json['value'];
-        }).catch(error => {
-          console.log(error)
-        }).catch(error => {
-          this.props.handleAPIErrors({url: tokenUrl, params: tokenParams, error: error});
-        });
+        .then(response => response.json())
+        .then(parsed_json => parsed_json['value'])
+        .catch(error => this.props.handleAPIErrors({url: tokenUrl, params: tokenParams, error: error}));
 
       var creditCardUrl = tuitionBlueprintBaseUrl + "/credit_card";
       var creditCardParams = {
@@ -263,14 +257,10 @@ class AddForm extends Component {
         })
       };
       var creditCardId = await fetch(creditCardUrl, creditCardParams)
-      .then(response => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, response: response}))
-      .then(response => {
-        return response.json();
-      }).then(parsed_json => {
-        return parsed_json["id"]
-      }).catch(error => {
-        this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, error: error});
-      });
+        .then(response => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, response: response}))
+        .then(response => response.json())
+        .then(parsed_json => parsed_json["id"])
+        .catch(error => this.props.handleAPIErrors({url: creditCardUrl, params: creditCardParams, error: error}));
     } else if (this.state.paymentMethod === 'e-check') {
       var bankAccountUrl = tuitionBlueprintBaseUrl + "/bank_account";
       var bankAccountParams = {
@@ -289,14 +279,10 @@ class AddForm extends Component {
         })
       };
       var bankAccountId = await fetch(bankAccountUrl, bankAccountParams)
-      .then(response => this.props.handleAPIErrors({url: bankAccountUrl, params: creditCardParams, response: response}))
-      .then(response => {
-        return response.json();
-      }).then(parsed_json => {
-        return parsed_json["id"]
-      }).catch(error => {
-        this.props.handleAPIErrors({url: bankAccountUrl, params: bankAccountParams, error: error});
-      });
+        .then(response => this.props.handleAPIErrors({url: bankAccountUrl, params: creditCardParams, response: response}))
+        .then(response => response.json())
+        .then(parsed_json => parsed_json["id"])
+        .catch(error => this.props.handleAPIErrors({url: bankAccountUrl, params: bankAccountParams, error: error}));
     }
 
     if (creditCardId || bankAccountId) {
@@ -330,10 +316,8 @@ class AddForm extends Component {
         })
       }
       fetch(recurringPaymentsUrl, recurringPaymentsParams)
-      .then(response => this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, response: response}))
-      .catch(error => {
-        this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, error: error});
-      });
+        .then(response => this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, response: response}))
+        .catch(error => this.props.handleAPIErrors({url: recurringPaymentsUrl, params: recurringPaymentsParams, error: error}));
     }
 
     // TODO XXX close at top, also update state to include new recurring payment
@@ -422,10 +406,8 @@ class DeleteForm extends Component {
     var deleteRecurringPaymentUrl = tuitionBlueprintBaseUrl + "/recurring_payments/" + this.props.customer.recurring_payment.id;
     var deleteRecurringPaymentParams =
     fetch(deleteRecurringPaymentUrl, deleteRecurringPaymentParams)
-    .then(response => this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, response: response}))
-    .catch(error => {
-      this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, error: error});
-    });
+      .then(response => this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, response: response}))
+      .catch(error => this.props.handleAPIErrors({url: deleteRecurringPaymentUrl, params: deleteRecurringPaymentParams, error: error}));
   }
   render() {
     if (this.props.customer) {
@@ -504,25 +486,17 @@ class Customers extends Component {
      var itemsParams = {credentials: 'include'};
      fetch(itemsUrl, itemsParams)
        .then(response => this.handleAPIErrors({url: itemsUrl, params: itemsParams, response: response}))
-       .then(response => {
-         return response.json();
-       }).then(parsed_json => {
-         this.setState({items: parsed_json});
-       }).catch(error => {
-         this.handleAPIErrors({url: itemsUrl, params: itemsParams, error: error})
-       });
+       .then(response => return response.json())
+       .then(parsed_json => this.setState({items: parsed_json}))
+       .catch(error => this.handleAPIErrors({url: itemsUrl, params: itemsParams, error: error}));
 
     var customersUrl = tuitionBlueprintBaseUrl + "/customers";
     var customersParams = {credentials: 'include'};
     fetch(customersUrl, customersParams)
       .then(response => this.handleAPIErrors({url: customersUrl, params: customersParams, response: response}))
-      .then(response => {
-          return response.json();
-      }).then(parsed_json => {
-        this.setState({customers: parsed_json});
-      }).catch(error => {
-          this.handleAPIErrors({url: customersUrl, params: customersParams, error: error});
-      });
+      .then(response => response.json())
+      .then(parsed_json => this.setState({customers: parsed_json}))
+      .catch(error => this.handleAPIErrors({url: customersUrl, params: customersParams, error: error}));
   };
   handleAPIErrors = ({url, params, response, error}={}) => {
     if (error) {
