@@ -486,7 +486,7 @@ class Customers extends Component {
      var itemsParams = {credentials: 'include'};
      fetch(itemsUrl, itemsParams)
        .then(response => this.handleAPIErrors({url: itemsUrl, params: itemsParams, response: response}))
-       .then(response => return response.json())
+       .then(response => response.json())
        .then(parsed_json => this.setState({items: parsed_json}))
        .catch(error => this.handleAPIErrors({url: itemsUrl, params: itemsParams, error: error}));
 
