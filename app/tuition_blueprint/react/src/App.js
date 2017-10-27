@@ -202,20 +202,14 @@ class AddForm extends Component {
       }
     }
   };
-  requestClose = () => {
-    this.setState(this.baseState)
-  };
-  open = () => {
-    this.setState({ open: true });
-  };
+  requestClose = () => this.setState(this.baseState);
+  open = () => this.setState({ open: true });
   item = e => {
     this.setState({ itemId: e.target.value });
     this.setState({ amount: this.props.items.find((item) => { return (item.id === e.target.value); }).price.toString() });
 
   };
-  change = e => {
-    this.setState({[e.target.name]: e.target.value});
-  };
+  change = e => this.setState({[e.target.name]: e.target.value});
   submit = async () => {
     if (this.state.paymentMethod === 'credit-card') {
       var tokenUrl = qboBaseUrl + "/quickbooks/v4/payments/tokens";
@@ -396,12 +390,8 @@ class DeleteForm extends Component {
       open: false,
     };
   };
-  requestClose = () => {
-    this.setState({open: false});
-  };
-  open = () => {
-    this.setState({ open: true });
-  };
+  requestClose = () => this.setState({open: false});
+  open = () => this.setState({ open: true });
   delete = () => {
     var deleteRecurringPaymentUrl = tuitionBlueprintBaseUrl + "/recurring_payments/" + this.props.customer.recurring_payment.id;
     var deleteRecurringPaymentParams =
@@ -440,12 +430,8 @@ class APIErrorSnackbar extends Component {
   state = {
     open: false,
   };
-  open = () => {
-    this.setState({open: true});
-  };
-  handleRequestClose = () => {
-    this.setState({open: false});
-  };
+  open = () => this.setState({open: true});
+  handleRequestClose = () => this.setState({open: false});
   render() {
     return (
       <Snackbar
@@ -462,9 +448,7 @@ class APIErrorSnackbar extends Component {
 class RecurringPayment extends Component {
   render() {
     if (this.props.recurringPayment) {
-      var item = this.props.items.filter(item => {
-          return item.id === this.props.recurringPayment.item_id
-      })[0]
+      var item = this.props.items.filter(item => item.id === this.props.recurringPayment.item_id)[0]
       var endDate = new Date(this.props.recurringPayment.end_date);
       return item.name + ", $" + (this.props.recurringPayment.amount).toLocaleString() + "/month, through " + endDate.toLocaleString("en-us", { month: "long" }) + " of " + endDate.getFullYear();
     } else {
