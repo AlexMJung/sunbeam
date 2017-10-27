@@ -158,9 +158,12 @@ class AddForm extends Component {
       checkingPhone: "",
       valid: false
     };
+    this.baseState = this.state
   };
   componentWillReceiveProps(nextProps) {
     if (nextProps.items && this.state.itemId === "") {
+      this.baseState.itemId = nextProps.items[0].id
+      this.baseState.amount = nextProps.items[0].price.toFixed(2)
       this.setState({
         itemId: nextProps.items[0].id,
         amount: nextProps.items[0].price.toFixed(2)
@@ -204,7 +207,10 @@ class AddForm extends Component {
     }
   };
   requestClose = () => this.setState({ open: false});
-  open = () => this.setState({ open: true });
+  open = () => {
+    this.setState(this.baseState);
+    this.setState({ open: true });
+  };
   item = e => {
     this.setState({
       itemId: e.target.value,
@@ -345,14 +351,9 @@ class AddForm extends Component {
               </Select>
             </FormControl>
             <NumberFormat validationParent={this} validators={[Validators.required, Validators.positiveAmount]} margin="dense" id="amount" decimalPrecision={2} label="Amount" customInput={ValidatedTextField} value={this.state.amount} thousandSeparator={true} prefix={'$'} onChange={this.change} name="amount" fullWidth/>
-
             <Typography type="caption" style={{marginTop: "20px"}}>
               Payment will begin on the first of next month.
             </Typography>
-
-
-
-
             <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={{width: "48%", marginRight: "4%"}} format="##" />
             <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={{width: "48%"}}/>
             <FormControl margin="dense" fullWidth>
