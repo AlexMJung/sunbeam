@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
 BASEDIR=$(dirname "$0")
+cd $BASEDIR/../react/
+
+echo "-----> Running npm install"
+npm install
 
 echo "-----> Running npm run build"
 
-echo "XXX"
-echo $BASEDIR
-echo "XXX"
-
-cd $BASEDIR/../react/
 npm run build
