@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-find app -name "post_compile" -exec bash {} \;
+find app -name "post_compile" -exec echo "-----> Executing {}" \; -exec bash {} \;
 
 echo "-----> Post-compile done"
