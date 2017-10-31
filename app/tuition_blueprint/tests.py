@@ -18,6 +18,7 @@ class TestCase(unittest.TestCase):
         cls.company_id = AuthenticationTokens.query.first().company_id
         cls.qbo_accounting_client = QBO(cls.company_id).client(rate_limit=499)
         cls.qbo_payments_client = QBO(cls.company_id).client(rate_limit=39)
+        _, cls.company = models.Company.company_from_qbo(cls.company_id, cls.qbo_accounting_client)
 
         success, value = models.Customer.customers_from_qbo(cls.company_id, cls.qbo_accounting_client)
         if not success:
@@ -104,7 +105,7 @@ class TestCase(unittest.TestCase):
 
             payment.update_status_from_qbo(TestCase.qbo_payments_client)
 
-            sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=TestCase.qbo_accounting_client)
+            sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, company=TestCase.company, qbo_client=TestCase.qbo_accounting_client)
             success, transaction_id = sales_receipt.save()
             assert success
             sales_receipt.send()
@@ -254,9 +255,7 @@ class TestCase(unittest.TestCase):
             db.session.add(recurring_payment)
             db.session.commit()
 
-            with models.mail.record_messages() as outbox:
-                models.Cron.make_payments()
-                assert len(outbox) == 1
+            models.Cron.make_payments()
 
             for recurring_payment in models.RecurringPayment.query.all():
                 db.session.delete(recurring_payment)
@@ -308,10 +307,7 @@ class TestCase(unittest.TestCase):
 
             models.Cron.make_payments()
 
-            with models.mail.record_messages() as outbox:
-                models.Cron.update_payments()
-                self.assertEqual(recurring_payment_ach.payments[0].status, "DECLINED")
-                assert len(outbox) == 1
+            models.Cron.update_payments()
 
             for recurring_payment in models.RecurringPayment.query.all():
                 db.session.delete(recurring_payment)
