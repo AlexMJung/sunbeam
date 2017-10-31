@@ -19,9 +19,13 @@ import { MuiThemeProvider, createMuiTheme } from 'material-ui/styles';
 import Snackbar from 'material-ui/Snackbar';
 import CloseIcon from 'material-ui-icons/Close';
 
+function getParameterByName(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
 
-var tuitionBlueprintBaseUrl = "http://localhost:5000/tuition";
-var qboBaseUrl = "https://sandbox.api.intuit.com"
+var tuitionBlueprintBaseUrl = getParameterByName("tuitionBlueprintBaseUrl");
+var qboPaymentsBaseUrl = getParameterByName("qboPaymentsBaseUrl");
 
 // https://gist.github.com/ShirtlessKirk/2134376
 var luhnChk = (function (arr) {
@@ -235,7 +239,7 @@ class AddForm extends Component {
   submit = async () => {
     this.requestClose();
     if (this.state.paymentMethod === 'credit-card') {
-      var tokenUrl = qboBaseUrl + "/quickbooks/v4/payments/tokens";
+      var tokenUrl = qboPaymentsBaseUrl + "/quickbooks/v4/payments/tokens";
       var tokenParams = {
         headers: {
           'Accept': 'application/json',

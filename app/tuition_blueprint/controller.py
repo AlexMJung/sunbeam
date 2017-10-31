@@ -3,7 +3,7 @@ import os
 import models
 from flask_cors import CORS, cross_origin
 from app.authorize_qbo_blueprint.models import QBO
-from app import db
+from app import db, app
 import json
 import re
 from flask import jsonify
@@ -25,7 +25,12 @@ def requires_auth(f):
 def index():
     if not session.get('qbo_company_id', None):
         return redirect(url_for("authorize_qbo_blueprint.index", redirect_url=url_for("{0}.index".format(blueprint.name))))
-    return redirect(url_for('static', filename='react/index.html'))
+
+    return redirect("{0}?tuitionBlueprintBaseUrl={1}&qboBaseUrl={2}".format(
+        url_for("{0}.static".format(blueprint.name), filename="react/index.html"),
+        url_for("{0}.index".format(blueprint.name), _external=True)[:-1],
+        app.config['QBO_PAYMENTS_API_BASE_URL']
+    ))
 
 @blueprint.route('/customers')
 @cross_origin(supports_credentials=True)
