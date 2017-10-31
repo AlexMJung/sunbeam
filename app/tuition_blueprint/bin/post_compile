@@ -4,5 +4,9 @@ BASEDIR=$(dirname "$0")
 
 echo "-----> Running npm run build"
 
+echo "XXX"
+echo $BASEDIR
+echo "XXX"
+
 cd $BASEDIR/../react/
 npm run build
