@@ -19,9 +19,13 @@ import { MuiThemeProvider, createMuiTheme } from 'material-ui/styles';
 import Snackbar from 'material-ui/Snackbar';
 import CloseIcon from 'material-ui-icons/Close';
 
+function getParameterByName(name) {
+    var match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
 
-var tuitionBlueprintBaseUrl = "http://localhost:5000/tuition";
-var qboBaseUrl = "https://sandbox.api.intuit.com"
+var tuitionBlueprintBaseUrl = getParameterByName("tuitionBlueprintBaseUrl");
+var qboPaymentsBaseUrl = getParameterByName("qboPaymentsBaseUrl");
 
 // https://gist.github.com/ShirtlessKirk/2134376
 var luhnChk = (function (arr) {
@@ -235,7 +239,7 @@ class AddForm extends Component {
   submit = async () => {
     this.requestClose();
     if (this.state.paymentMethod === 'credit-card') {
-      var tokenUrl = qboBaseUrl + "/quickbooks/v4/payments/tokens";
+      var tokenUrl = qboPaymentsBaseUrl + "/quickbooks/v4/payments/tokens";
       var tokenParams = {
         headers: {
           'Accept': 'application/json',
@@ -328,7 +332,7 @@ class AddForm extends Component {
           bank_account_id: bankAccountId,
           credit_card_id: creditCardId,
           item_id: this.state.itemId,
-          amount: this.state.amount.replace(/^\$/g,''),
+          amount: this.state.amount.replace(/^\$|,/g,''),
           start_date: startDate,
           end_date: endDate,
         })
@@ -369,8 +373,8 @@ class AddForm extends Component {
             <Typography type="caption" style={{marginTop: "20px"}}>
               Payment will begin on the first of next month.
             </Typography>
-            <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={{width: "48%", marginRight: "4%"}} format="##" />
-            <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={{width: "48%"}} />
+            <NumberFormat placeholder={new Date().getMonth()+1} validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" id="endDateMonth" name="endDateMonth" label="Last Payment Month" customInput={ValidatedTextField} value={this.state.endDateMonth} onChange={this.change} style={{width: "48%", marginRight: "4%"}} format="##" />
+            <NumberFormat placeholder={new Date().getFullYear() - 2000} validationParent={this} validators={[Validators.required, Validators.yearNumber]} margin="dense" id="endDateYear" name="endDateYear" label="Last Payment Year" customInput={ValidatedTextField} value={this.state.endDateYear} onChange={this.change} format="##" style={{width: "48%"}} />
             <FormControl margin="dense" fullWidth>
               <InputLabel shrink htmlFor="amount">Payment Method</InputLabel><br />
               <RadioGroup name="paymentMethod" value={this.state.paymentMethod} onChange={this.change}  style={{ display: 'inline' }}>
@@ -381,8 +385,8 @@ class AddForm extends Component {
             { this.state.paymentMethod === "credit-card" &&
               <div>
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardNumber]} margin="dense" fullWidth label="Credit Card Number" id="creditCardNumber" name="creditCardNumber" customInput={ValidatedTextField} value={this.state.creditCardNumber} onChange={this.change} format="#### #### #### ####" />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }} />
-                <NumberFormat validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }} />
+                <NumberFormat placeholder={new Date().getMonth()+1} validationParent={this} validators={[Validators.required, Validators.monthNumber]} margin="dense" label="Expiration Month" id="creditCardExpirationMonth" name="creditCardExpirationMonth" customInput={ValidatedTextField} value={this.state.creditCardExpirationMonth} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }} />
+                <NumberFormat placeholder={new Date().getFullYear() - 2000} validationParent={this} validators={[Validators.required, Validators.yearNumber]} label="Expiration Year" id="creditCardExpirationYear" name="creditCardExpirationYear" customInput={ValidatedTextField} value={this.state.creditCardExpirationYear} onChange={this.change} format="##" style={{width: "32%", marginRight: "2%" }} />
                 <NumberFormat validationParent={this} validators={[Validators.required, Validators.creditCardSecurityCode]} label="Security Code" id="creditCardSecurityCode" name="creditCardSecurityCode" customInput={ValidatedTextField} value={this.state.creditCardSecurityCode} onChange={this.change} format="###" style={{width: "32%" }} />
               </div>
             }

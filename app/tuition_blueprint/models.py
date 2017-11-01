@@ -81,9 +81,10 @@ class QBOAccountingModel(Repr):
         return (True, response.json()[self.__class__.__name__]["Id"])
 
 class InvoiceOrSalesReceipt(QBOAccountingModel):
-    def __init__(self, id=None, recurring_payment=None, qbo_client=None):
+    def __init__(self, id=None, recurring_payment=None, company=None, qbo_client=None):
         self.id = id
         self.recurring_payment = recurring_payment
+        self.company = company
         self.qbo_client = qbo_client
         self.url = None
         # not sure how to handle failure case here... will blow up and stop everything
@@ -108,10 +109,11 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
                 "value": str(self.recurring_payment.customer_id)
             }
         }
+        data["BillEmailCc"] = { "Address": self.company.email }
+
         if self.customer.email:
-            data["BillEmail"] = {
-                "Address": self.customer.email
-            }
+            data["BillEmail"] = { "Address": self.customer.email }
+
         return data
 
     def send(self):
@@ -126,13 +128,13 @@ class InvoiceOrSalesReceipt(QBOAccountingModel):
             return (True, None)
 
 class Invoice(InvoiceOrSalesReceipt):
-    def __init__(self, id=None, recurring_payment=None, qbo_client=None):
-        super(Invoice, self).__init__(id=id, recurring_payment=recurring_payment, qbo_client=qbo_client)
+    def __init__(self, id=None, recurring_payment=None, company=None,qbo_client=None):
+        super(Invoice, self).__init__(id=id, recurring_payment=recurring_payment, company=company, qbo_client=qbo_client)
         self.url = "{0}/v3/company/{1}/invoice".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.recurring_payment.company_id)
 
 class SalesReceipt(InvoiceOrSalesReceipt):
-    def __init__(self, id=None, recurring_payment=None, payment=None, qbo_client=None):
-        super(SalesReceipt, self).__init__(id=id, recurring_payment=recurring_payment, qbo_client=qbo_client)
+    def __init__(self, id=None, recurring_payment=None, payment=None, company=None, qbo_client=None):
+        super(SalesReceipt, self).__init__(id=id, recurring_payment=recurring_payment, company=company, qbo_client=qbo_client)
         self.payment = payment
         self.url = "{0}/v3/company/{1}/salesreceipt".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], self.recurring_payment.company_id)
 
@@ -389,7 +391,7 @@ class Cron(object):
             return
         customer = value
 
-        invoice = Invoice(recurring_payment=recurring_payment, qbo_client=qbo_client)
+        invoice = Invoice(recurring_payment=recurring_payment, company=company, qbo_client=qbo_client)
         success, value = invoice.save()
         if success:
             invoice.id = value
@@ -404,15 +406,6 @@ class Cron(object):
             return
 
         if customer.email:
-            message = {
-                "subject": "Tuition payment for {0} declined".format(customer.name),
-                "sender": "Wildflower Schools <noreply@wildflowerschools.org>",
-                "recipients": customer.email.split(","), # intuit comma separates email addresses
-                "cc": [company.email],
-                "bcc": ['dan.grigsby@wildflowerschools.org'],
-                "html": render_template("failed_email.html", customer=customer)
-            }
-            mail.send(Message(**message))
             success, value = invoice.send()
             if not success:
                 message = {
@@ -464,7 +457,7 @@ class Cron(object):
             db.session.commit()
             if payment.status != "PENDING":
                 if payment.status == "SUCCEEDED":
-                    sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, qbo_client=qbo_accounting_client)
+                    sales_receipt = models.SalesReceipt(recurring_payment=payment.recurring_payment, company=company, qbo_client=qbo_accounting_client)
                     success, value = sales_receipt.save()
                     if not success:
                         message = {
