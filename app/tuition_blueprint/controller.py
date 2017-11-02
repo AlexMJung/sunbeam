@@ -26,7 +26,7 @@ def index():
     if not session.get('qbo_company_id', None):
         return redirect(url_for("authorize_qbo_blueprint.index", redirect_url=url_for("{0}.index".format(blueprint.name))))
 
-    return redirect("{0}?tuitionBlueprintBaseUrl={1}&qboBaseUrl={2}".format(
+    return redirect("{0}?tuitionBlueprintBaseUrl={1}&qboPaymentsBaseUrl={2}".format(
         url_for("{0}.static".format(blueprint.name), filename="react/index.html"),
         url_for("{0}.index".format(blueprint.name), _external=True)[:-1],
         app.config['QBO_PAYMENTS_API_BASE_URL']
