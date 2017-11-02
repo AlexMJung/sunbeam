@@ -19,7 +19,6 @@ class AuthenticationTokens(Base):
     access_token = db.Column(db.String(1024))
     refresh_token = db.Column(db.String(120))
 
-
 class OAuth2SessionWithRateLimit(OAuth2Session):
     def __init__(self, *args, **kwargs):
         self.last_api_call = None

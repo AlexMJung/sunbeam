@@ -66,8 +66,8 @@ class Child(object):
             return None
 
     @classmethod
-    def children_from_qbo(cls, qbo):
-        customers = qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'}).data['QueryResponse'].get('Customer', [])
+    def children_from_qbo(cls, qbo, qbo_company_id):
+        customers = qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo), headers={'Accept': 'application/json'}).data['QueryResponse'].get('Customer', [])
         return [child for child in [Child.from_qbo(customer) for customer in customers] if child]
 
     @classmethod
@@ -106,7 +106,7 @@ def sync_children():
     for qbo_company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
         app.logger.info("Syncing QBO company id: {0}".format(qbo_company_id))
         qbo = QBO(qbo_company_id).client(rate_limit=500)
-        qbo_children = Child.children_from_qbo(qbo)
+        qbo_children = Child.children_from_qbo(qbo, qbo_company_id)
         for tc_child in Child.children_from_tc(School.query.filter_by(qbo_company_id=qbo_company_id).first().tc_school_id):
             qbo_child = next((c for c in qbo_children if c.tc_id == tc_child.tc_id), None)
             if qbo_child:
