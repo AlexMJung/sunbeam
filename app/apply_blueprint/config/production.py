@@ -301,12 +301,100 @@ HUBS = {
                 {'SURVEY_MONKEY': "81257131", 'TRANSPARENT_CLASSROOM': 'income'}, # other
             ]
         }
+    },
+    'SWEETPEA': {
+        'TRANSPARENT_CLASSROOM_API_TOKEN': os.environ.get('TRANSPARENT_CLASSROOM_API_TOKEN', None),
+        'SURVEY_MONKEY_SURVEY_ID': '124164049',
+        'SURVEY_MONKEY_COLLECTOR_ID': 'V5RLJ9Q',
+        'MAPPING': {
+            'PARENTS': [
+                {
+                    'FIRST_NAME': {'SURVEY_MONKEY': "185608094", 'TRANSPARENT_CLASSROOM': 'parent1_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "185608098", 'TRANSPARENT_CLASSROOM': 'parent1_name.last'} ,
+                    'EMAIL': {'SURVEY_MONKEY': "185608095", 'TRANSPARENT_CLASSROOM': 'parent1_email'},
+                    'PHONE': {'SURVEY_MONKEY': "185608097", 'TRANSPARENT_CLASSROOM': 'parent1_mobile_number'},
+                    'ADDRESS': {'SURVEY_MONKEY': "185608096", 'TRANSPARENT_CLASSROOM': 'parent1_address'},
+                },
+                {
+                    'FIRST_NAME': {'SURVEY_MONKEY': "185608099", 'TRANSPARENT_CLASSROOM': 'parent2_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "185608103", 'TRANSPARENT_CLASSROOM': 'parent2_name.last'} ,
+                    'EMAIL': {'SURVEY_MONKEY': "185608100", 'TRANSPARENT_CLASSROOM': 'parent2_email'},
+                    'PHONE': {'SURVEY_MONKEY': "185608101", 'TRANSPARENT_CLASSROOM': 'parent2_mobile_number'},
+                    'ADDRESS': {'SURVEY_MONKEY': "185608102", 'TRANSPARENT_CLASSROOM': 'parent2_address'},
+                }
+            ],
+            'CHILDREN': [
+                { # first
+                    'FIRST_NAME': {'SURVEY_MONKEY': "185608104", 'TRANSPARENT_CLASSROOM': 'child_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "185608107", 'TRANSPARENT_CLASSROOM': 'child_name.last'},
+                    'NATIVE_LANGUAGE': {'SURVEY_MONKEY': '185608165', 'TRANSPARENT_CLASSROOM': 'native_language'},
+                    'GENDER': {'SURVEY_MONKEY': "185608106", 'TRANSPARENT_CLASSROOM': 'child_gender'},
+                    'DOB': {'SURVEY_MONKEY': "185608105", 'TRANSPARENT_CLASSROOM': 'child_birth_date'},
+                    'WHEN_ENTER': {'SURVEY_MONKEY': '185608166', 'TRANSPARENT_CLASSROOM': 'anticipated_date_of_entry_to_our_school'},
+                    'THROUGH': {'SURVEY_MONKEY': '201339683', 'TRANSPARENT_CLASSROOM': 'through_what_age'},
+                    'ETHNICITY': {'SURVEY_MONKEY': '185608136', 'TRANSPARENT_CLASSROOM': 'ethnicity'},
+                    'PROGRAM': {'SURVEY_MONKEY': '186823456', 'TRANSPARENT_CLASSROOM': 'program'},
+                    'EXTENDED_DAY': {'SURVEY_MONKEY': '194803440', 'TRANSPARENT_CLASSROOM': 'extended_day'},
+                    'GOALS': {'SURVEY_MONKEY': '185608109', 'TRANSPARENT_CLASSROOM': 'educational_goals'},
+                    'ABILITIES': {'SURVEY_MONKEY': '185608110', 'TRANSPARENT_CLASSROOM': 'interests,_strengths_&_abilities'},
+                    'SOCIAL': {'SURVEY_MONKEY': '185608113', 'TRANSPARENT_CLASSROOM': 'social_and_emotional_development'},
+                    'MEDICAL': {'SURVEY_MONKEY': '185608114', 'TRANSPARENT_CLASSROOM': 'medical_history_&_diagnostic_evaluations'},
+                },
+                { # second
+                    'FIRST_NAME': {'SURVEY_MONKEY': "185608143", 'TRANSPARENT_CLASSROOM': 'child_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "185608144", 'TRANSPARENT_CLASSROOM': 'child_name.last'},
+                    'NATIVE_LANGUAGE': {'SURVEY_MONKEY': '185608171', 'TRANSPARENT_CLASSROOM': 'native_language'},
+                    'GENDER': {'SURVEY_MONKEY': "185608146", 'TRANSPARENT_CLASSROOM': 'child_gender'},
+                    'DOB': {'SURVEY_MONKEY': "185608145", 'TRANSPARENT_CLASSROOM': 'child_birth_date'},
+                    'WHEN_ENTER': {'SURVEY_MONKEY': '185608172', 'TRANSPARENT_CLASSROOM': 'anticipated_date_of_entry_to_our_school'},
+                    'THROUGH': {'SURVEY_MONKEY': '185608199', 'TRANSPARENT_CLASSROOM': 'through_what_age'},
+                    'ETHNCITY': {'SURVEY_MONKEY': '185608148', 'TRANSPARENT_CLASSROOM': 'ethnicity'},
+                    'PROGRAM': {'SURVEY_MONKEY': '194805520', 'TRANSPARENT_CLASSROOM': 'program'},
+                    'EXTENDED_DAY': {'SURVEY_MONKEY': '201440868', 'TRANSPARENT_CLASSROOM': 'extended_day'},
+                    'GOALS': {'SURVEY_MONKEY': '185608175', 'TRANSPARENT_CLASSROOM': 'educational_goals'},
+                    'ABILITIES': {'SURVEY_MONKEY': '185608176', 'TRANSPARENT_CLASSROOM': 'interests,_strengths_&_abilities'},
+                    'SOCIAL': {'SURVEY_MONKEY': '185608177', 'TRANSPARENT_CLASSROOM': 'social_and_emotional_development'},
+                    'MEDICAL': {'SURVEY_MONKEY': '185608178', 'TRANSPARENT_CLASSROOM': 'medical_history_&_diagnostic_evaluations'},
+                },
+                { # third
+                    'FIRST_NAME': {'SURVEY_MONKEY': "185608151", 'TRANSPARENT_CLASSROOM': 'child_name.first'},
+                    'LAST_NAME': {'SURVEY_MONKEY': "185608152", 'TRANSPARENT_CLASSROOM': 'child_name.last'},
+                    'NATIVE_LANGUAGE': {'SURVEY_MONKEY': '185608181', 'TRANSPARENT_CLASSROOM': 'native_language'},
+                    'GENDER': {'SURVEY_MONKEY': "185608154", 'TRANSPARENT_CLASSROOM': 'child_gender'},
+                    'DOB': {'SURVEY_MONKEY': "185608153", 'TRANSPARENT_CLASSROOM': 'child_birth_date'},
+                    'WHEN_ENTER': {'SURVEY_MONKEY': '185608183', 'TRANSPARENT_CLASSROOM': 'anticipated_date_of_entry_to_our_school'},
+                    'THROUGH': {'SURVEY_MONKEY': '185608200', 'TRANSPARENT_CLASSROOM': 'through_what_age'},
+                    'ETHNCITY': {'SURVEY_MONKEY': '185608156', 'TRANSPARENT_CLASSROOM': 'ethnicity'},
+                    'PROGRAM': {'SURVEY_MONKEY': '194805738', 'TRANSPARENT_CLASSROOM': 'program'},
+                    'EXTENDED_DAY': {'SURVEY_MONKEY': '201441046', 'TRANSPARENT_CLASSROOM': 'extended_day'},
+                    'GOALS': {'SURVEY_MONKEY': '185608186', 'TRANSPARENT_CLASSROOM': 'educational_goals'},
+                    'ABILITIES': {'SURVEY_MONKEY': '185608187', 'TRANSPARENT_CLASSROOM': 'interests,_strengths_&_abilities'},
+                    'SOCIAL': {'SURVEY_MONKEY': '185608188', 'TRANSPARENT_CLASSROOM': 'social_and_emotional_development'},
+                    'MEDICAL': {'SURVEY_MONKEY': '185608189', 'TRANSPARENT_CLASSROOM': 'medical_history_&_diagnostic_evaluations'},
+                },
+            ],
+            'ANSWERS': [
+                {'SURVEY_MONKEY': "185608197", 'TRANSPARENT_CLASSROOM': 'how_hear'},
+                {'SURVEY_MONKEY': "185608111", 'TRANSPARENT_CLASSROOM': 'parent_involvement'},
+                {'SURVEY_MONKEY': "185608108", 'TRANSPARENT_CLASSROOM': 'diversity'},
+                {'SURVEY_MONKEY': "185608112", 'TRANSPARENT_CLASSROOM': 'siblings'},
+                {'SURVEY_MONKEY': "185608140", 'TRANSPARENT_CLASSROOM': 'financial_assistance'},
+                {'SURVEY_MONKEY': "185608137", 'TRANSPARENT_CLASSROOM': 'household_size'},
+                {'SURVEY_MONKEY': "185608119", 'TRANSPARENT_CLASSROOM': 'income'}, # 2 member household
+                {'SURVEY_MONKEY': "185608121", 'TRANSPARENT_CLASSROOM': 'income'}, # 3 member household
+                {'SURVEY_MONKEY': "185608123", 'TRANSPARENT_CLASSROOM': 'income'}, # 4 member household
+                {'SURVEY_MONKEY': "185608125", 'TRANSPARENT_CLASSROOM': 'income'}, # 5 member household
+                {'SURVEY_MONKEY': "185608127", 'TRANSPARENT_CLASSROOM': 'income'}, # 6 member household
+                {'SURVEY_MONKEY': "185608129", 'TRANSPARENT_CLASSROOM': 'income'}, # 7 member household
+                {'SURVEY_MONKEY': "185608131", 'TRANSPARENT_CLASSROOM': 'income'}, # 8 member household
+            ]
+        }
     }
 }
 
 HUBS['CAMBRIDGE2018'] = copy.deepcopy(HUBS['CAMBRIDGE'])
 HUBS['HAVERHILL2018'] = copy.deepcopy(HUBS['HAVERHILL'])
-
+HUBS['SWEETPEA2018'] = copy.deepcopy(HUBS['SWEETPEA'])
 
 HUBS['SANDBOX'] = copy.deepcopy(HUBS['CAMBRIDGE'])
 HUBS['SANDBOX']['TRANSPARENT_CLASSROOM_API_TOKEN'] = os.environ.get('TRANSPARENT_CLASSROOM_API_TOKEN_SANDBOX', None)

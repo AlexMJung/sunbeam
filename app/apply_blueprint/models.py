@@ -191,6 +191,12 @@ class Application(object):
         self.add(app.config['HUBS'][self.response.hub.upper()]['MAPPING'], None)
         for child in self.children:
             child.age_on = lambda d, child=child: dateutil.relativedelta.relativedelta(dateutil.parser.parse(d), dateutil.parser.parse(child.dob.value)).years
+            # for single-school apps
+            if not child.__dict__.get('schools', None):
+                schools = []
+                for school in School.query.filter_by(hub=self.response.hub).all():
+                    schools.append(school.name)
+                setattr(child, "schools", Application.Answer(schools, None, "schools"))
         for parent in self.parents:
             if hasattr(parent, "phone"):
                 parent.phone.validator = lambda parent=parent: not parent.phone.value or re.match('^\D*(\d\D*){6,}$', parent.phone.value) != None
