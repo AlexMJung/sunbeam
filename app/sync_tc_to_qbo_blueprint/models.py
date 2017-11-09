@@ -6,16 +6,37 @@ import os
 
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
 
-class Base(db.Model):
-    __abstract__  = True
-    id = db.Column(db.Integer, primary_key=True)
-    date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
-    date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+class Company(object):
+    def __init__(self, name=None):
+        self.name = name
 
-class School(Base):
-    __tablename__ = "{0}_school".format(tablename_prefix)
-    tc_school_id = db.Column(db.Integer)
-    qbo_company_id = db.Column(db.BigInteger)
+    @classmethod
+    def company_from_qbo(cls, company_id, qbo_client):
+        response = qbo_client.get("{0}/v3/company/{1}/companyinfo/{1}?minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], company_id), headers={'Accept': 'application/json'})
+        return Company(name = response.json()["CompanyInfo"]["CompanyName"])
+
+class School(object):
+    def __init__(self, name=None, id=None):
+        self.name = name
+        self.id = id
+
+    @classmethod
+    def schools_from_tc(cls):
+        request_session = requests.session()
+        request_session.headers.update({
+            "X-TransparentClassroomToken": app.config['TRANSPARENT_CLASSROOM_API_TOKEN'],
+            "Accept": "application/json"
+        })
+
+        response = request_session.get("{0}/api/v1/schools.json".format(app.config["TRANSPARENT_CLASSROOM_BASE_URL"]))
+
+        schools = []
+        for o in response.json():
+            if o['type'] == "School":
+                schools.append(School(name=o['name'], id=o['id']))
+
+        return schools
+
 
 class Child(object):
     def __init__(self, tc_id=None, tc_program=None, qbo_id=None, qbo_sync_token=None, first_name="", last_name="", email=""):
@@ -66,8 +87,8 @@ class Child(object):
             return None
 
     @classmethod
-    def children_from_qbo(cls, qbo, qbo_company_id):
-        customers = qbo.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo), headers={'Accept': 'application/json'}).data['QueryResponse'].get('Customer', [])
+    def children_from_qbo(cls, qbo_client, qbo_company_id):
+        customers = qbo_client.get("{0}/v3/company/{1}/query?query=select%20%2A%20from%20customer&minorversion=4".format(app.config["QBO_ACCOUNTING_API_BASE_URL"], qbo_company_id), headers={'Accept': 'application/json'}).json()['QueryResponse'].get('Customer', [])
         return [child for child in [Child.from_qbo(customer) for customer in customers] if child]
 
     @classmethod
@@ -85,29 +106,50 @@ class Child(object):
         children = []
         children_response = request_session.get("{0}/api/v1/children.json".format(app.config["TRANSPARENT_CLASSROOM_BASE_URL"]))
         for child in children_response.json():
+            email_addresses = []
+
             parent_ids = child.get('parent_ids', [])
             if len(parent_ids) > 0:
-                parents = (u for u in users if u['id'] in parent_ids)
-                child = Child(
-                    tc_id          = child['id'],
-                    tc_program     = child.get("program", ""),
-                    qbo_id         = None,
-                    qbo_sync_token = None,
-                    first_name     = child['first_name'],
-                    last_name      = child['last_name'],
-                    email          = ", ".join([p['email'] for p in parents])
-                )
-                print child
-                children.append(child)
+                for parent in (u for u in users if u['id'] in parent_ids):
+                    if parent['email']:
+                        email_addresses.append(parent['email'])
+
+            email = ", ".join(email_addresses)
+
+            child = Child(
+                tc_id          = child['id'],
+                tc_program     = child.get("program", ""),
+                qbo_id         = None,
+                qbo_sync_token = None,
+                first_name     = child['first_name'],
+                last_name      = child['last_name'],
+                email          = email
+            )
+            children.append(child)
         return children;
 
 def sync_children():
     app.logger.info("Syncing TC children to QBO customers")
+
+    schools = School.schools_from_tc()
+
     for qbo_company_id in [a.company_id for a in AuthenticationTokens.query.all()]:
-        app.logger.info("Syncing QBO company id: {0}".format(qbo_company_id))
-        qbo = QBO(qbo_company_id).client(rate_limit=500)
-        qbo_children = Child.children_from_qbo(qbo, qbo_company_id)
-        for tc_child in Child.children_from_tc(School.query.filter_by(qbo_company_id=qbo_company_id).first().tc_school_id):
+        qbo_client = QBO(qbo_company_id).client(rate_limit=500)
+
+        company = Company.company_from_qbo(qbo_company_id, qbo_client)
+
+        filtered_list = filter(lambda s: s.name == company.name, schools)
+
+        if len(filtered_list) != 1:
+            continue
+
+        tc_school_id = filtered_list[0]
+
+        qbo_children = Child.children_from_qbo(qbo_client, qbo_company_id)
+
+        app.logger.info("Syncing: {0}".format(company.name))
+
+        for tc_child in Child.children_from_tc(tc_school_id):
             qbo_child = next((c for c in qbo_children if c.tc_id == tc_child.tc_id), None)
             if qbo_child:
                 tc_child.qbo_sync_token = qbo_child.qbo_sync_token
