@@ -2,4 +2,6 @@
 
 find app -name "post_compile" -exec echo "-----> Executing {}" \; -exec bash {} \;
 
+./flask.sh db migrate
+
 echo "-----> Post-compile done"
