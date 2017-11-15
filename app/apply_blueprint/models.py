@@ -19,7 +19,7 @@ class MailWithLogging(Mail):
         app.logger.critical(message)
         super(Mail, self).send(message)
 
-mail = MailWithLogging(app)
+# mail = MailWithLogging(app)
 
 mail = Mail(app)
 tablename_prefix = os.path.dirname(os.path.realpath(__file__)).split("/")[-1]
@@ -271,7 +271,7 @@ class Application(object):
                 value = self.response.answers_for(item['SURVEY_MONKEY'])
                 if len(value) == 0:
                     value = None
-                elif len(value) == 1: # use value, not list, is there's only one
+                elif len(value) == 1: # use value, not list, if there's only one
                     value = value[0]
                 return Application.Answer(value, item['SURVEY_MONKEY'], item['TRANSPARENT_CLASSROOM'])
             else:
