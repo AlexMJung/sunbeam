@@ -9,6 +9,10 @@ app = Flask(__name__)
 app.config.from_object('config.default')
 app.config.from_object("config.{0}".format(os.environ.get('APP_CONFIG_MODE', None)))
 
+@app.route("/")
+def index():
+    return "Ok"
+
 import cli # import after app defined
 
 db = SQLAlchemy(app)
